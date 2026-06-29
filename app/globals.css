@@ -378,7 +378,6 @@ h2, h3 { font-size: 1.25rem; font-weight: 700; color: var(--text-main); }
     scroll-behavior: smooth; 
     -webkit-overflow-scrolling: touch; 
     scrollbar-width: none;
-    touch-action: pan-x;
     width: 100%;
 }
 .horizontal-scroll::-webkit-scrollbar { display: none; }
