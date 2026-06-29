@@ -7,19 +7,23 @@ function SearchPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const query = searchParams.get('q');
+  const genre = searchParams.get('genre');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
-      if (!query) return;
+      if (!query && !genre) return;
       setLoading(true);
       try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+        const url = genre 
+          ? `/api/search?genre=${encodeURIComponent(genre)}`
+          : `/api/search?q=${encodeURIComponent(query)}`;
+        const res = await fetch(url);
         const data = await res.json();
         if (data.success) {
           // Deduplicate
-          const unique = data.data.filter((v, i, a) => a.findIndex(t => t.url === v.url) === i);
+          const unique = data.data.filter((v, i, a) => a.url === v.url ? a.findIndex(t => t.url === v.url) === i : true);
           setResults(unique);
         }
       } catch (e) {
@@ -29,10 +33,14 @@ function SearchPageContent() {
       }
     }
     fetchData();
-  }, [query]);
+  }, [query, genre]);
 
   return (
     <div className="search-list-view page-transition">
+      <h2 className="search-page-title" style={{ color: 'white', fontSize: '1.4rem', fontWeight: '800', marginBottom: '25px', padding: '0 10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ width: '4px', height: '22px', background: 'var(--primary)', borderRadius: '2px' }}></div>
+        {genre ? `Genre: ${genre}` : `Hasil Pencarian: "${query || ''}"`}
+      </h2>
       
       <div className="search-results-list">
         {loading ? (

@@ -11,6 +11,18 @@ export default function Navbar() {
   const [theme, setTheme] = useState('dark');
 
   const [mounted, setMounted] = useState(false);
+  const [showSearchOverlay, setShowSearchOverlay] = useState(false);
+
+  useEffect(() => {
+    if (showSearchOverlay) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showSearchOverlay]);
 
   useEffect(() => {
     setMounted(true);
@@ -44,6 +56,7 @@ export default function Navbar() {
 
   const handleSearch = (e) => {
     if (e.key === 'Enter' && query.trim()) {
+      setShowSearchOverlay(false);
       router.push(`/search?q=${encodeURIComponent(query.trim())}`);
     }
   };
@@ -67,51 +80,97 @@ export default function Navbar() {
     }
   };
 
-  const isSearchPage = pathname === '/search';
   return (
-    <nav className={`navbar ${isSearchPage ? 'absolute-nav' : ''}`} id="topNavbar">
-        <img 
-          src="/Zunime.png" 
-          alt="Logo Web" 
-          className="top-logo" 
-          onClick={handleLogoClick}
-          style={{ border: user ? '2px solid #ff0000' : 'none', cursor: 'pointer' }}
-        />
-        <div className="top-search-bar">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-                strokeLinecap="round" strokeLinejoin="round">
+    <>
+      <nav className="navbar" id="topNavbar">
+          <img 
+            src="/Zunime.png" 
+            alt="Logo Web" 
+            className="top-logo" 
+            onClick={handleLogoClick}
+            style={{ border: user ? '2px solid #ff0000' : 'none', cursor: 'pointer' }}
+          />
+          <div className="top-search-bar" onClick={() => setShowSearchOverlay(true)} style={{ cursor: 'pointer' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                  strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input 
+                type="search" 
+                id="searchInput"
+                placeholder="Search anime..." 
+                autoComplete="off" 
+                readOnly
+                value={query}
+              />
+          </div>
+          <button className="theme-toggle-btn" id="themeBtn" onClick={toggleTheme}>
+              {theme === 'dark' ? (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+              ) : (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="5"></circle>
+                  <line x1="12" y1="1" x2="12" y2="3"></line>
+                  <line x1="12" y1="21" x2="12" y2="23"></line>
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                  <line x1="1" y1="12" x2="3" y2="12"></line>
+                  <line x1="21" y1="12" x2="23" y2="12"></line>
+                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+              )}
+          </button>
+      </nav>
+
+      {showSearchOverlay && (
+        <div className="search-overlay-fullscreen">
+          <div className="overlay-header">
+            <div className="overlay-search-bar">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <circle cx="11" cy="11" r="8"></circle>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input 
-              type="search" 
-              id="searchInput"
-              placeholder="Search anime..." 
-              autoComplete="off" 
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={handleSearch}
-            />
+              </svg>
+              <input
+                type="search"
+                className="overlay-search-input"
+                placeholder="Cari anime..."
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={handleSearch}
+              />
+            </div>
+            <button className="overlay-close-btn" onClick={() => setShowSearchOverlay(false)}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+
+          <div className="overlay-body">
+            <h3 className="overlay-section-title">Pilih Genre (Kategori)</h3>
+            <div className="genre-grid">
+              {['Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy', 'Romance', 'Sci-Fi', 'Slice of Life', 'Supernatural', 'Ecchi', 'Hentai'].map((g) => (
+                <button
+                  key={g}
+                  className={`genre-filter-tag ${g === 'Hentai' ? 'hentai-tag' : ''}`}
+                  onClick={() => {
+                    setShowSearchOverlay(false);
+                    router.push(`/search?genre=${encodeURIComponent(g)}`);
+                  }}
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
-        <button className="theme-toggle-btn" id="themeBtn" onClick={toggleTheme}>
-            {theme === 'dark' ? (
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-              </svg>
-            ) : (
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="5"></circle>
-                <line x1="12" y1="1" x2="12" y2="3"></line>
-                <line x1="12" y1="21" x2="12" y2="23"></line>
-                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                <line x1="1" y1="12" x2="3" y2="12"></line>
-                <line x1="21" y1="12" x2="23" y2="12"></line>
-                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-              </svg>
-            )}
-        </button>
-    </nav>
+      )}
+    </>
   );
 }

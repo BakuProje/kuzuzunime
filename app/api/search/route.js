@@ -8,13 +8,102 @@ const CACHE_TTL = 3600 * 1000; // 1 hour
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get('q');
+  const genre = searchParams.get('genre');
+
+  // Genre Filter Route
+  if (genre) {
+    const isHentai = genre.toLowerCase() === 'hentai';
+    const cacheKey = `genre-${genre.toLowerCase()}`;
+    
+    // Check Cache
+    if (searchCache.has(cacheKey)) {
+      const cached = searchCache.get(cacheKey);
+      if (Date.now() - cached.timestamp < CACHE_TTL) {
+        return NextResponse.json({ success: true, data: cached.data });
+      }
+    }
+
+    try {
+      const response = await fetch('https://graphql.anilist.co', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `
+            query ($genre: String, $isAdult: Boolean) {
+              Page(page: 1, perPage: 40) {
+                media(genre: $genre, type: ANIME, isAdult: $isAdult, sort: POPULARITY_DESC) {
+                  id
+                  title { romaji english }
+                  coverImage { extraLarge large }
+                  bannerImage
+                  averageScore
+                  episodes
+                  status
+                  format
+                  genres
+                  description
+                }
+              }
+            }
+          `,
+          variables: { 
+            genre: isHentai ? 'Hentai' : genre, 
+            isAdult: isHentai ? true : null 
+          }
+        })
+      });
+
+      if (!response.ok) {
+        return NextResponse.json({ success: true, data: [] });
+      }
+
+      const json = await response.json();
+      const mediaList = json?.data?.Page?.media || [];
+
+      const mappedList = mediaList.map(m => {
+        const romaji = m.title?.romaji || '';
+        const english = m.title?.english || '';
+        const fallbackTitle = romaji || english || 'Unknown';
+        
+        const urlFriendlyTitle = (romaji || english || '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+        const url = `/anime/${m.id}/`;
+
+        return {
+          title: fallbackTitle,
+          altTitle: english && english !== romaji ? english : null,
+          url: url,
+          image: m.coverImage?.extraLarge || m.coverImage?.large,
+          banner: m.bannerImage,
+          score: m.averageScore ? (m.averageScore / 10).toFixed(1) : '8.5',
+          episode: m.episodes ? m.episodes.toString() : (m.status === 'RELEASING' ? 'Ongoing' : 'Tamat'),
+          status: m.status === 'RELEASING' ? 'Ongoing' : (m.status === 'FINISHED' ? 'Completed' : m.status),
+          type: m.format || 'TV',
+          genres: m.genres || [],
+          synopsis: m.description ? m.description.replace(/<[^>]*>/g, '') : null
+        };
+      });
+
+      searchCache.set(cacheKey, {
+        timestamp: Date.now(),
+        data: mappedList
+      });
+
+      return NextResponse.json({ success: true, data: mappedList });
+    } catch (err) {
+      console.error("Genre search API error:", err);
+      return NextResponse.json({ success: false, data: [] });
+    }
+  }
 
   // 1. VALIDATION
   if (!q || q.trim() === "") {
     return NextResponse.json({
       success: false,
       data: [],
-      error: "Query parameter 'q' is required"
+      error: "Query parameter 'q' or 'genre' is required"
     }, { status: 400 });
   }
 
