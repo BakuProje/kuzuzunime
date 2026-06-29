@@ -45,8 +45,22 @@ export default function PremiumAnimeCard({ anime, isNew = false, views = null })
   // Deterministic views based on title
   const viewCount = views || `${(Math.floor(Math.abs(title.length * 7.5) % 800) + 150)}K`;
 
+  const handlePreload = () => {
+    if (typeof window !== 'undefined') {
+      const dataToSave = {
+        title,
+        image: image || '/placeholder.jpg',
+        rating: displayRating,
+        banner: image || '/placeholder.jpg',
+        genres: anime.genres || [],
+        status: anime.status || 'Ongoing'
+      };
+      sessionStorage.setItem('pending_anime_detail', JSON.stringify(dataToSave));
+    }
+  };
+
   return (
-    <Link href={`/anime/${encodeURIComponent(url)}`}>
+    <Link href={`/anime/${encodeURIComponent(url)}`} onClick={handlePreload}>
       <div className="premium-anime-card">
           <div className="premium-card-img-wrapper">
               <img src={image || '/placeholder.jpg'} loading="lazy" alt={title} />

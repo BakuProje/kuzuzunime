@@ -11,8 +11,24 @@ export default function AnimeDetail() {
   const params = useParams();
   const { activeEpisode, currentTime, duration } = usePlayer();
   const router = useRouter();
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const pending = sessionStorage.getItem('pending_anime_detail');
+      if (pending) {
+        try {
+          return JSON.parse(pending);
+        } catch (_) {}
+      }
+    }
+    return null;
+  });
+  const [loading, setLoading] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const pending = sessionStorage.getItem('pending_anime_detail');
+      if (pending) return false;
+    }
+    return true;
+  });
   const [isFavorite, setIsFavorite] = useState(false);
   const [user, setUser] = useState(null);
   const [progressList, setProgressList] = useState([]);
@@ -34,7 +50,12 @@ export default function AnimeDetail() {
         const res = await fetch(`/api/detail?url=${encodeURIComponent(slug)}`);
         const json = await res.json();
         if (json.success) {
-          setData(json.data);
+          setData(prev => {
+            if (prev) {
+              return { ...prev, ...json.data };
+            }
+            return json.data;
+          });
           checkFavStatus(slug);
           saveToHistory(json.data);
           fetchProgress();
@@ -131,11 +152,18 @@ export default function AnimeDetail() {
     <div id="detail-view" className="section-container page-transition">
       <div className="premium-detail-header">
         <div className="premium-cover-wrapper">
-          <img src={data.banner || data.image} className="premium-cover-bg" alt="Cover" />
+          {/* Blurred ambient background using the identical poster image */}
+          <img src={data.image} className="premium-cover-bg blurred" alt="Ambient Background" />
           <div className="premium-cover-overlay"></div>
+          
           <button className="premium-back-btn" onClick={() => router.back()}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
           </button>
+
+          {/* Portrait Poster Card: identical to homepage, uncropped, aspect-ratio preserved */}
+          <div className="premium-poster-container">
+            <img src={data.image} className="premium-portrait-poster" alt={data.title} />
+          </div>
         </div>
 
         <div className="premium-content">
@@ -187,7 +215,7 @@ export default function AnimeDetail() {
 
           <div className="premium-synopsis-section">
             <h3>Synopsis</h3>
-            <p style={{ textAlign: 'justify' }}>{data.description || 'Tidak ada deskripsi tersedia.'}</p>
+            <p style={{ textAlign: 'justify' }}>{data.description || (data.episodes ? 'Tidak ada deskripsi tersedia.' : 'Memuat deskripsi...')}</p>
           </div>
 
           {data.relatedAnime && data.relatedAnime.length > 0 && (
@@ -195,7 +223,20 @@ export default function AnimeDetail() {
               <h3>Musim Terkait</h3>
               <div className="horizontal-scroll" style={{ display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '10px' }}>
                 {data.relatedAnime.map((rel) => (
-                  <div key={rel.url || rel.id} className="scroll-card" style={{ minWidth: '140px', cursor: 'pointer' }} onClick={() => router.push(`/anime/${encodeURIComponent(rel.id)}`)}>
+                  <div key={rel.url || rel.id} className="scroll-card" style={{ minWidth: '140px', cursor: 'pointer' }} onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      const dataToSave = {
+                        title: rel.title,
+                        image: rel.image,
+                        rating: rel.rating,
+                        banner: rel.image,
+                        genres: [],
+                        status: 'Ongoing'
+                      };
+                      sessionStorage.setItem('pending_anime_detail', JSON.stringify(dataToSave));
+                    }
+                    router.push(`/anime/${encodeURIComponent(rel.id)}`);
+                  }}>
                     <div className="scroll-card-img">
                       <img src={rel.image} alt={rel.title} />
                       <div className="ep-badge">⭐ {rel.rating}</div>
@@ -211,7 +252,7 @@ export default function AnimeDetail() {
 
       <div className="episode-section-container" style={{ padding: '20px' }}>
         <h2 style={{ color: 'white', marginBottom: '15px' }}>Daftar Episode</h2>
-        {(() => {
+        {data.episodes ? (() => {
           const mergedProgressList = [...progressList];
           if (activeEpisode) {
             const cleanActiveSlug = activeEpisode.slug.replace(/^\/|\/$/g, '');
@@ -231,7 +272,13 @@ export default function AnimeDetail() {
             }
           }
           return <EpisodeList episodes={data.episodes} progressList={mergedProgressList} />;
-        })()}
+        })() : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <Skeleton style={{ width: '100%', height: '52px', borderRadius: '12px' }} />
+            <Skeleton style={{ width: '100%', height: '52px', borderRadius: '12px' }} />
+            <Skeleton style={{ width: '100%', height: '52px', borderRadius: '12px' }} />
+          </div>
+        )}
       </div>
     </div>
   );
