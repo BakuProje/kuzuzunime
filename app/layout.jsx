@@ -96,24 +96,24 @@ export default function RootLayout({ children }) {
       </head>
       <body suppressHydrationWarning={true}>
         <PlayerProvider>
-          <SmoothScroll>
-            <div className="simulator-pre-loader simulator" aria-label="Loading" role="status" style={{ display: 'none' }} suppressHydrationWarning={true}></div>
-            <div id="__next_zunime">
-              <Navbar />
+          <div id="__next_zunime">
+            <Navbar />
+            <SmoothScroll>
+              <div className="simulator-pre-loader simulator" aria-label="Loading" role="status" style={{ display: 'none' }} suppressHydrationWarning={true}></div>
               <LayoutWrapper>
                 <ScrollAnimations />
                 {children}
               </LayoutWrapper>
-              <BottomNav />
-              <GlobalPlayer />
-              <PresenceTracker />
-              <div id="toast-container"></div>
-              <div id="loading" className="hidden">
-                <div className="spinner"></div>
-                <p>ZUNIME</p>
-              </div>
+            </SmoothScroll>
+            <BottomNav />
+            <GlobalPlayer />
+            <PresenceTracker />
+            <div id="toast-container"></div>
+            <div id="loading" className="hidden">
+              <div className="spinner"></div>
+              <p>ZUNIME</p>
             </div>
-          </SmoothScroll>
+          </div>
         </PlayerProvider>
       </body>
     </html>

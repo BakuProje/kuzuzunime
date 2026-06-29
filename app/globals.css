@@ -4815,3 +4815,37 @@ body:has(#profile-view-v2), html:has(#profile-view-v2) {
   box-shadow: 0 4px 15px rgba(239, 68, 68, 0.45);
 }
 
+@media (max-width: 600px) {
+  .overlay-header {
+    gap: 10px;
+    margin-bottom: 20px;
+    margin-top: 5px;
+  }
+  .overlay-search-bar {
+    padding: 10px 12px;
+    gap: 8px;
+    border-radius: 10px;
+  }
+  .overlay-search-input {
+    font-size: 0.95rem;
+  }
+  .overlay-close-btn {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+  }
+  .overlay-close-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+  .genre-grid {
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 8px;
+  }
+  .genre-filter-tag {
+    padding: 10px 6px;
+    font-size: 0.8rem;
+    border-radius: 8px;
+  }
+}
+

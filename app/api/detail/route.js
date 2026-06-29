@@ -28,6 +28,69 @@ export async function GET(request) {
     let samehadakuUrl = url;
     const cleanSlug = url.replace(/^\/|\/$/g, '').replace(/^(anime|watch)\//, '');
 
+    // Check if it is a Nekopoi Hentai ID
+    if (cleanSlug.startsWith('hentai-')) {
+      const nekopoiId = cleanSlug.replace('hentai-', '');
+      console.log("Loading Nekopoi details for ID:", nekopoiId);
+      try {
+        const nekopoi = require('nekopoi-scraper');
+        const detailData = await nekopoi.detail(nekopoiId);
+        
+        if (detailData && !detailData.error) {
+          const title = detailData.title || detailData.info_meta?.title || 'Hentai Series';
+          const image = detailData.thumbnail || detailData.image || '/placeholder.jpg';
+          const description = detailData.synopsis || detailData.content || 'Nonton anime hentai sub indo gratis.';
+          
+          let episodes = [];
+          if (Array.isArray(detailData.episode)) {
+            episodes = detailData.episode.map(ep => ({
+              title: ep.title || `Episode ${ep.id}`,
+              url: `/watch/hentai-${ep.id}/`,
+              date: ep.date || 'Terbaru'
+            }));
+          } else if (Array.isArray(detailData.stream)) {
+            episodes = [{
+              title: title,
+              url: `/watch/hentai-post-${nekopoiId}/`,
+              date: 'Terbaru'
+            }];
+          }
+
+          const genres = [];
+          if (detailData.info_meta?.genre) {
+            genres.push(...detailData.info_meta.genre.split(',').map(g => g.trim()));
+          } else {
+            genres.push('Hentai');
+          }
+
+          const info = {
+            japanese: detailData.info_meta?.japanese || '',
+            english: detailData.info_meta?.english || '',
+            status: detailData.info_meta?.status || 'Completed',
+            studio: detailData.info_meta?.producer || 'Unknown',
+            dirilis: detailData.info_meta?.released || 'Unknown',
+            skor: detailData.info_meta?.score || '9.0',
+            genre: genres.join(', ')
+          };
+
+          return NextResponse.json({
+            success: true,
+            data: {
+              title,
+              image,
+              description,
+              episodes,
+              info,
+              genres,
+              relatedAnime: []
+            }
+          });
+        }
+      } catch (nekopoiErr) {
+        console.error("Nekopoi detail scrape error:", nekopoiErr.message);
+      }
+    }
+
     // Check if url contains a numeric AniList ID
     if (/^\d+$/.test(cleanSlug)) {
       console.log("Detail URL contains an AniList ID:", cleanSlug);

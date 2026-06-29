@@ -23,15 +23,114 @@ export async function GET(request) {
       }
     }
 
+    // Nekopoi Scraper for Hentai Genre
+    if (isHentai) {
+      try {
+        const nekopoi = require('nekopoi-scraper');
+        const listData = await nekopoi.list('hentai', 1);
+        if (listData && !listData.error && Array.isArray(listData)) {
+          const mappedList = listData.map(item => {
+            const url = `/anime/hentai-${item.id}/`;
+            return {
+              title: item.title,
+              altTitle: 'Hentai',
+              url: url,
+              image: item.image,
+              banner: item.image,
+              score: '9.0',
+              episode: 'Ongoing',
+              status: 'Ongoing',
+              type: 'Hentai',
+              genres: ['Hentai'],
+              synopsis: `Nonton anime hentai ${item.title} sub indo gratis hanya di ZUNIME. Nikmati streaming lancar dengan kualitas HD.`
+            };
+          });
+
+          searchCache.set(cacheKey, {
+            timestamp: Date.now(),
+            data: mappedList
+          });
+
+          return NextResponse.json({ success: true, data: mappedList });
+        }
+      } catch (nekopoiErr) {
+        console.error("Nekopoi scraper failed, falling back to AniList Hentai:", nekopoiErr.message);
+      }
+
+      // Fallback: AniList Hentai Query if Nekopoi fails
+      try {
+        const response = await fetch('https://graphql.anilist.co', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: `
+              query ($genre: String) {
+                Page(page: 1, perPage: 40) {
+                  media(genre: $genre, type: ANIME, isAdult: true, sort: POPULARITY_DESC) {
+                    id
+                    title { romaji english }
+                    coverImage { extraLarge large }
+                    bannerImage
+                    averageScore
+                    episodes
+                    status
+                    format
+                    genres
+                    description
+                  }
+                }
+              }
+            `,
+            variables: { genre: 'Hentai' }
+          })
+        });
+
+        if (response.ok) {
+          const json = await response.json();
+          const mediaList = json?.data?.Page?.media || [];
+          const mappedList = mediaList.map(m => {
+            const romaji = m.title?.romaji || '';
+            const english = m.title?.english || '';
+            const fallbackTitle = romaji || english || 'Unknown';
+            const url = `/anime/${m.id}/`;
+            return {
+              title: fallbackTitle,
+              altTitle: english && english !== romaji ? english : null,
+              url: url,
+              image: m.coverImage?.extraLarge || m.coverImage?.large,
+              banner: m.bannerImage,
+              score: m.averageScore ? (m.averageScore / 10).toFixed(1) : '8.5',
+              episode: m.episodes ? m.episodes.toString() : (m.status === 'RELEASING' ? 'Ongoing' : 'Tamat'),
+              status: m.status === 'RELEASING' ? 'Ongoing' : (m.status === 'FINISHED' ? 'Completed' : m.status),
+              type: m.format || 'TV',
+              genres: m.genres || [],
+              synopsis: m.description ? m.description.replace(/<[^>]*>/g, '') : null
+            };
+          });
+
+          searchCache.set(cacheKey, {
+            timestamp: Date.now(),
+            data: mappedList
+          });
+
+          return NextResponse.json({ success: true, data: mappedList });
+        }
+      } catch (err) {
+        console.error("AniList Hentai fallback error:", err);
+      }
+      return NextResponse.json({ success: true, data: [] });
+    }
+
+    // Normal Genres: AniList GraphQL query (omitting isAdult argument entirely to avoid any null match issues!)
     try {
       const response = await fetch('https://graphql.anilist.co', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           query: `
-            query ($genre: String, $isAdult: Boolean) {
+            query ($genre: String) {
               Page(page: 1, perPage: 40) {
-                media(genre: $genre, type: ANIME, isAdult: $isAdult, sort: POPULARITY_DESC) {
+                media(genre: $genre, type: ANIME, sort: POPULARITY_DESC) {
                   id
                   title { romaji english }
                   coverImage { extraLarge large }
@@ -46,10 +145,7 @@ export async function GET(request) {
               }
             }
           `,
-          variables: { 
-            genre: isHentai ? 'Hentai' : genre, 
-            isAdult: isHentai ? true : null 
-          }
+          variables: { genre }
         })
       });
 

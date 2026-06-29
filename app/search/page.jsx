@@ -23,7 +23,7 @@ function SearchPageContent() {
         const data = await res.json();
         if (data.success) {
           // Deduplicate
-          const unique = data.data.filter((v, i, a) => a.url === v.url ? a.findIndex(t => t.url === v.url) === i : true);
+          const unique = data.data.filter((v, i, a) => a.findIndex(t => t.url === v.url) === i);
           setResults(unique);
         }
       } catch (e) {
