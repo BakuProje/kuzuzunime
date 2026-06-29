@@ -53,7 +53,7 @@ export default function CategoriesPage() {
   }, [selected]);
 
   return (
-    <div className="section-container fade-slide-up visible" style={{ paddingBottom: '100px' }}>
+    <div className="section-container page-transition" style={{ paddingBottom: '100px' }}>
       <div id="genre-grid" className="genre-grid">
         {CATEGORIES.map((cat, idx) => (
           <button 

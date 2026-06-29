@@ -366,7 +366,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div id="profile-view-v2" className="profile-container-premium">
+      <div id="profile-view-v2" className="profile-container-premium page-transition">
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: '15px' }}>
           <div className="spinner"></div>
           <p style={{ color: 'var(--text-muted)', fontFamily: 'Outfit', fontWeight: 'bold' }}>ZUNIME PROFILE...</p>
@@ -376,7 +376,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div id="profile-view-v2" className="profile-container-premium">
+    <div id="profile-view-v2" className="profile-container-premium page-transition">
       {/* Toast Notification */}
       {toast.message && (
         <div id="toast-container" className="toast-top-center-premium">

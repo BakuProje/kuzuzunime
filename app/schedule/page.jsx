@@ -103,7 +103,7 @@ export default function SchedulePage() {
   const activeDayData = scheduleData.find(d => d.day === activeDay);
 
   return (
-    <div id="schedule-view" className="section-container fade-slide-up visible">
+    <div id="schedule-view" className="section-container page-transition">
       <div className="section-header" style={{ padding: '20px 20px 10px', display: 'flex', justifyContent: 'center' }}>
         <h1 style={{ fontSize: '1.4rem', fontWeight: '800' }}>Jadwal Tayang</h1>
       </div>

@@ -2175,6 +2175,24 @@ img {
   transform: translateY(0);
 }
 
+/* Page Transition Animation (Smooth and Instant) */
+.page-transition {
+  opacity: 0;
+  animation: pageFadeIn 0.35s cubic-bezier(0.33, 1, 0.68, 1) forwards;
+}
+
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
 /* Duplicated auth styles removed, using consolidated premium styling from top block */
 
 /* --- MODERN ADMIN BUTTONS --- */

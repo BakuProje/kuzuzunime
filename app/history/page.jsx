@@ -43,7 +43,7 @@ export default function HistoryPage() {
   if (loading) return <div className="section-container"><Skeleton style={{ height: '400px' }} /></div>;
 
   return (
-    <div id="history-view" className="section-container fade-slide-up visible" style={{ paddingBottom: '100px' }}>
+    <div id="history-view" className="section-container page-transition" style={{ paddingBottom: '100px' }}>
 
       <div id="recent-list-inner" style={{ display: 'block', padding: '0' }}>
         {Object.keys(groups).length > 0 ? (

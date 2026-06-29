@@ -48,7 +48,18 @@ export default function WatchPage() {
     }, 250);
   };
 
-  const slug = decodeURIComponent(params.slug);
+  const rawSlug = params.slug;
+  let slug = '';
+  const rawPath = Array.isArray(rawSlug) ? rawSlug.map(decodeURIComponent).join('/') : decodeURIComponent(rawSlug || '');
+  let cleanPath = rawPath.replace(/\/+/g, '/').replace(/^\/+|\/+$/g, '');
+  if (cleanPath.startsWith('watch/')) {
+    cleanPath = cleanPath.substring(6);
+  }
+  if (cleanPath.startsWith('anime/')) {
+    cleanPath = cleanPath.substring(6);
+  }
+  slug = '/' + cleanPath + '/';
+
 
   useEffect(() => {
     let isMounted = true;
@@ -209,7 +220,7 @@ export default function WatchPage() {
 
   return (
     <>
-    <div id="watch-view" className="watch-content-wrapper fade-slide-up visible" style={{ paddingBottom: '100px' }}>
+    <div id="watch-view" className="watch-content-wrapper page-transition" style={{ paddingBottom: '100px' }}>
       
       {/* Video Player Spacer */}
       <div className="watch-player-spacer"></div>

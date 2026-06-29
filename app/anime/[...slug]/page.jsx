@@ -17,7 +17,16 @@ export default function AnimeDetail() {
   const [user, setUser] = useState(null);
   const [progressList, setProgressList] = useState([]);
 
-  const slug = decodeURIComponent(params.slug);
+  const rawSlug = params.slug;
+  let slug = '';
+  const rawPath = Array.isArray(rawSlug) ? rawSlug.map(decodeURIComponent).join('/') : decodeURIComponent(rawSlug || '');
+  const cleanPath = rawPath.replace(/\/+/g, '/').replace(/^\/+|\/+$/g, '');
+  if (cleanPath.startsWith('anime/')) {
+    slug = '/' + cleanPath + '/';
+  } else {
+    slug = '/anime/' + cleanPath + '/';
+  }
+
 
   useEffect(() => {
     async function fetchData() {
@@ -119,7 +128,7 @@ export default function AnimeDetail() {
   };
 
   return (
-    <div id="detail-view" className="section-container fade-slide-up visible">
+    <div id="detail-view" className="section-container page-transition">
       <div className="premium-detail-header">
         <div className="premium-cover-wrapper">
           <img src={data.banner || data.image} className="premium-cover-bg" alt="Cover" />

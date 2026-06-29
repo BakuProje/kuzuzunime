@@ -6,6 +6,7 @@ import LayoutWrapper from './components/LayoutWrapper';
 import { PlayerProvider } from './components/PlayerContext';
 import GlobalPlayer from './components/GlobalPlayer';
 import PresenceTracker from './components/PresenceTracker';
+import SmoothScroll from './components/SmoothScroll';
 
 export const metadata = {
   metadataBase: new URL('https://zunime.vercel.app'),
@@ -95,22 +96,24 @@ export default function RootLayout({ children }) {
       </head>
       <body suppressHydrationWarning={true}>
         <PlayerProvider>
-          <div className="simulator-pre-loader simulator" aria-label="Loading" role="status" style={{ display: 'none' }} suppressHydrationWarning={true}></div>
-          <div id="__next_zunime">
-            <Navbar />
-            <LayoutWrapper>
-              <ScrollAnimations />
-              {children}
-            </LayoutWrapper>
-            <BottomNav />
-            <GlobalPlayer />
-            <PresenceTracker />
-            <div id="toast-container"></div>
-            <div id="loading" className="hidden">
-              <div className="spinner"></div>
-              <p>ZUNIME</p>
+          <SmoothScroll>
+            <div className="simulator-pre-loader simulator" aria-label="Loading" role="status" style={{ display: 'none' }} suppressHydrationWarning={true}></div>
+            <div id="__next_zunime">
+              <Navbar />
+              <LayoutWrapper>
+                <ScrollAnimations />
+                {children}
+              </LayoutWrapper>
+              <BottomNav />
+              <GlobalPlayer />
+              <PresenceTracker />
+              <div id="toast-container"></div>
+              <div id="loading" className="hidden">
+                <div className="spinner"></div>
+                <p>ZUNIME</p>
+              </div>
             </div>
-          </div>
+          </SmoothScroll>
         </PlayerProvider>
       </body>
     </html>

@@ -5,7 +5,7 @@ export default function DeveloperPage() {
   const router = useRouter();
 
   return (
-    <div id="developer-view" className="section-container fade-slide-up visible">
+    <div id="developer-view" className="section-container page-transition">
       <div className="zutify-dev-container">
         {/* Logo Section */}
         <div className="zutify-logo-wrapper">

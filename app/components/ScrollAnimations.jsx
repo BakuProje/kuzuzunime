@@ -7,7 +7,7 @@ export default function ScrollAnimations() {
 
   useEffect(() => {
     // Add fade-slide-up class to sections
-    const containers = document.querySelectorAll('.section-container, .related-anime-section, .watch-content-wrapper, .episode-grid');
+    const containers = document.querySelectorAll('.related-anime-section, .category-section, .episode-grid');
     containers.forEach(el => {
       if (!el.classList.contains('fade-slide-up')) {
         el.classList.add('fade-slide-up');

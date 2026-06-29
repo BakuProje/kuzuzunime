@@ -244,7 +244,7 @@ export default function HomePage() {
   if (!mounted) return null;
 
   return (
-    <div id="home-view" className="section-container" style={{ paddingBottom: '100px' }}>
+    <div id="home-view" className="section-container page-transition" style={{ paddingBottom: '100px' }}>
       {/* Hero Slider */}
       <section className="hero-section-container">
         {loading ? (

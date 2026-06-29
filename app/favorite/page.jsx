@@ -42,7 +42,7 @@ export default function FavoritePage() {
   }, []);
 
   return (
-    <div id="favorite-view" className="section-container fade-slide-up visible" style={{ paddingBottom: '100px' }}>
+    <div id="favorite-view" className="section-container page-transition" style={{ paddingBottom: '100px' }}>
 
       <div id="fav-list-inner" style={{ display: 'block', padding: '0' }}>
         {loading ? (

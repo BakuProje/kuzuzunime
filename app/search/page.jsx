@@ -32,7 +32,7 @@ function SearchPageContent() {
   }, [query]);
 
   return (
-    <div className="search-list-view">
+    <div className="search-list-view page-transition">
       
       <div className="search-results-list">
         {loading ? (
@@ -93,7 +93,7 @@ function SearchPageContent() {
 export default function SearchPage() {
   return (
     <Suspense fallback={
-      <div className="search-list-view">
+      <div className="search-list-view page-transition">
         <div className="search-results-list">
           {[1, 2, 3, 4, 5].map(i => (
             <div key={i} className="search-item-skeleton">
