@@ -81,6 +81,65 @@ export async function GET(request) {
         data = await animeterbaru(page);
     }
 
+    // If we have fewer than 30 items (e.g. on localhost fallback), supplement with recently aired anime from the schedule
+    if (data && data.length > 0 && data.length < 30) {
+      try {
+        const schedRes = await fetch('https://puruboy-api.vercel.app/api/anime/samehadaku/schedule');
+        if (schedRes.ok) {
+          const schedJson = await schedRes.json();
+          if (schedJson && schedJson.success && schedJson.result) {
+            const nowWib = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+            const todayIndex = nowWib.getDay(); // 0 (Sunday) to 6 (Saturday)
+            const currentHour = nowWib.getHours();
+            const currentMinute = nowWib.getMinutes();
+            const dayToIndex = {
+              'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
+              'thursday': 4, 'friday': 5, 'saturday': 6
+            };
+
+            const extraUpdates = [];
+            Object.keys(schedJson.result).forEach(key => {
+              const dayWeekIndex = dayToIndex[key.toLowerCase()];
+              const isToday = dayWeekIndex === todayIndex;
+              const isYesterday = dayWeekIndex === (todayIndex === 0 ? 6 : todayIndex - 1);
+              
+              if (isToday || isYesterday) {
+                const list = schedJson.result[key] || [];
+                list.forEach(item => {
+                  let hasAired = isYesterday;
+                  if (isToday && item.time) {
+                    const [hour, minute] = item.time.split(':').map(Number);
+                    if (currentHour > hour || (currentHour === hour && currentMinute >= minute)) {
+                      hasAired = true;
+                    }
+                  }
+
+                  if (hasAired && item.original_url) {
+                    const cleanItemTitle = item.title;
+                    const exists = data.some(d => d.title.toLowerCase().includes(cleanItemTitle.toLowerCase()) || cleanItemTitle.toLowerCase().includes(d.title.toLowerCase()));
+                    if (!exists) {
+                      extraUpdates.push({
+                        title: item.title,
+                        url: item.original_url.replace(/^https?:\/\/[^\/]+/, ''),
+                        image: item.thumbnail,
+                        episode: 'Ongoing',
+                        score: item.score || 'N/A',
+                        released: isToday ? 'Hari Ini' : 'Kemarin',
+                        postedBy: 'Admin'
+                      });
+                    }
+                  }
+                });
+              }
+            });
+            data = [...data, ...extraUpdates];
+          }
+        }
+      } catch (schedErr) {
+        console.error("Schedule supplement failed:", schedErr.message);
+      }
+    }
+
     // If Samehadaku API is down, fallback to AniList trending
     if (!data || data.length === 0) {
       console.log('[/api/latest] Samehadaku down, using AniList fallback');

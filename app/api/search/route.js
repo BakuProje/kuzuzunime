@@ -1,33 +1,9 @@
 import { NextResponse } from 'next/server';
-import { search, getAniListData, cleanTitle } from '@/lib/scraper';
+import { search, getAniListData, cleanTitle, getSimilarity } from '@/lib/scraper';
 
 // Simple in-memory cache
 const searchCache = new Map();
 const CACHE_TTL = 3600 * 1000; // 1 hour
-
-function getSimilarity(str1, str2) {
-  const s1 = str1.toLowerCase().replace(/\s+/g, '');
-  const s2 = str2.toLowerCase().replace(/\s+/g, '');
-  if (s1 === s2) return 1.0;
-  if (s1.length < 2 || s2.length < 2) return 0.0;
-
-  const getBigrams = (str) => {
-    const bigrams = new Set();
-    for (let i = 0; i < str.length - 1; i++) {
-      bigrams.add(str.substring(i, i + 2));
-    }
-    return bigrams;
-  };
-
-  const b1 = getBigrams(s1);
-  const b2 = getBigrams(s2);
-  let intersection = 0;
-  for (const bigram of b1) {
-    if (b2.has(bigram)) intersection++;
-  }
-
-  return (2.0 * intersection) / (b1.size + b2.size);
-}
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);

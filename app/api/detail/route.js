@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { detail, getAniListData, cleanTitle } from '@/lib/scraper';
+import { detail, getAniListData, cleanTitle, search, getSimilarity } from '@/lib/scraper';
 
 // Extract a readable title from the slug URL
 function titleFromSlug(slug) {
@@ -25,20 +25,92 @@ export async function GET(request) {
   }
 
   try {
+    let samehadakuUrl = url;
+    const cleanSlug = url.replace(/^\/|\/$/g, '').replace(/^(anime|watch)\//, '');
+
+    // Check if url contains a numeric AniList ID
+    if (/^\d+$/.test(cleanSlug)) {
+      console.log("Detail URL contains an AniList ID:", cleanSlug);
+      try {
+        const aniDataForId = await getAniListData(cleanSlug);
+        if (aniDataForId) {
+          const romaji = aniDataForId.romajiTitle;
+          const english = aniDataForId.englishTitle;
+          
+          if (romaji || english) {
+            console.log(`Searching Samehadaku for AniList ID titles. Romaji: "${romaji}", English: "${english}"`);
+            
+            // Search Samehadaku in parallel
+            const searchPromises = [];
+            if (romaji) searchPromises.push(search(romaji));
+            if (english) searchPromises.push(search(english));
+            
+            const resultsArrays = await Promise.all(searchPromises);
+            const searchResults = [];
+            const seenUrls = new Set();
+            for (const arr of resultsArrays) {
+              if (arr) {
+                for (const item of arr) {
+                  if (!seenUrls.has(item.url)) {
+                    seenUrls.add(item.url);
+                    searchResults.push(item);
+                  }
+                }
+              }
+            }
+            
+            if (searchResults.length > 0) {
+              let bestMatch = null;
+              let bestScore = 0;
+              for (const item of searchResults) {
+                const scoreRomaji = romaji ? getSimilarity(romaji, item.title) : 0;
+                const scoreEnglish = english ? getSimilarity(english, item.title) : 0;
+                const score = Math.max(scoreRomaji, scoreEnglish);
+                
+                if (score > bestScore) {
+                  bestScore = score;
+                  bestMatch = item;
+                }
+              }
+              if (bestMatch && bestScore >= 0.45) {
+                samehadakuUrl = bestMatch.url;
+                console.log(`Mapped AniList ID to Samehadaku URL: ${samehadakuUrl} (Score: ${bestScore})`);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to map AniList ID to Samehadaku:", err);
+      }
+    }
+
     // Try to get detail from Samehadaku
     let data = null;
     try {
-      data = await detail(url);
+      if (samehadakuUrl.startsWith('/anime/') || samehadakuUrl.startsWith('http')) {
+        const unmatchedSlug = samehadakuUrl.replace(/^\/|\/$/g, '').replace(/^(anime|watch)\//, '');
+        // Discard if the slug is still a raw numeric ID (mapping failed) to prevent invalid API calls
+        if (!/^\d+$/.test(unmatchedSlug)) {
+          const detailData = await detail(samehadakuUrl);
+          // Verify returned data actually contains a title (prevent success:true with empty fields)
+          if (detailData && detailData.title && detailData.title.trim() !== '') {
+            data = detailData;
+          }
+        }
+      }
     } catch (e) {
       console.error('Samehadaku detail failed:', e?.message || e);
     }
 
     // Determine the title for AniList lookup
-    const title = data?.title || titleFromSlug(url);
+    const lookupSlug = samehadakuUrl.replace(/^\/|\/$/g, '').replace(/^(anime|watch)\//, '');
+    const title = data?.title || ( /^\d+$/.test(lookupSlug) ? lookupSlug : titleFromSlug(samehadakuUrl) );
     
     let aniData = null;
     try {
-      aniData = await getAniListData(cleanTitle(title));
+      const urlSlug = url.replace(/^\/|\/$/g, '').replace(/^(anime|watch)\//, '');
+      const aniLookupKey = /^\d+$/.test(urlSlug) ? urlSlug : cleanTitle(title);
+      aniData = await getAniListData(aniLookupKey);
     } catch (e) {
       console.error('AniList lookup failed:', e?.message || e);
     }
@@ -88,6 +160,7 @@ export async function GET(request) {
         format: aniData.format,
         startDate: aniData.startDate,
         endDate: aniData.endDate,
+        description: aniData.description || null,
         episodes: [], // No episodes available without Samehadaku
         info: {
           genre: (aniData.genres || []).join(', '),
@@ -95,7 +168,7 @@ export async function GET(request) {
           studio: aniData.studio || 'Unknown',
           skor: aniData.rating || '8.5'
         },
-        synopsis: `Detail lengkap untuk anime ini sedang tidak tersedia. Silakan coba lagi nanti.`
+        synopsis: aniData.description || 'Tidak ada deskripsi tersedia.'
       };
     }
     
