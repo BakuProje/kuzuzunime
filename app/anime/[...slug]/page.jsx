@@ -152,18 +152,12 @@ export default function AnimeDetail() {
     <div id="detail-view" className="section-container page-transition">
       <div className="premium-detail-header">
         <div className="premium-cover-wrapper">
-          {/* Blurred ambient background using the identical poster image */}
-          <img src={data.image} className="premium-cover-bg blurred" alt="Ambient Background" />
+          <img src={data.image} className="premium-cover-bg" alt="Cover" />
           <div className="premium-cover-overlay"></div>
           
           <button className="premium-back-btn" onClick={() => router.back()}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
           </button>
-
-          {/* Portrait Poster Card: identical to homepage, uncropped, aspect-ratio preserved */}
-          <div className="premium-poster-container">
-            <img src={data.image} className="premium-portrait-poster" alt={data.title} />
-          </div>
         </div>
 
         <div className="premium-content">
