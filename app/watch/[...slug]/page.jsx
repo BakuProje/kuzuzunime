@@ -335,6 +335,26 @@ export default function WatchPage() {
             </div>
           );
         })()}
+
+        {parentData?.relatedAnime && parentData.relatedAnime.length > 0 && (
+          <div className="related-anime-section" style={{ marginTop: '30px' }}>
+            <h2 style={{ color: 'white', fontSize: '1.1rem', fontWeight: '800', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ width: '4px', height: '16px', background: 'var(--primary)', borderRadius: '2px' }}></div>
+              Musim Terkait
+            </h2>
+            <div className="horizontal-scroll" style={{ display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '10px' }}>
+              {parentData.relatedAnime.map((rel) => (
+                <div key={rel.url || rel.id} className="scroll-card" style={{ minWidth: '140px', cursor: 'pointer' }} onClick={() => router.push(`/anime/${encodeURIComponent(rel.id)}`)}>
+                  <div className="scroll-card-img">
+                    <img src={rel.image} alt={rel.title} />
+                    <div className="ep-badge">⭐ {rel.rating}</div>
+                  </div>
+                  <div className="scroll-card-title">{rel.title}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
 
