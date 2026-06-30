@@ -15,12 +15,33 @@ export default function Navbar() {
 
   useEffect(() => {
     if (showSearchOverlay) {
+      const scrollY = window.scrollY;
       document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.body.dataset.scrollY = scrollY;
     } else {
+      const savedY = parseInt(document.body.dataset.scrollY || '0', 10);
       document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      window.scrollTo(0, savedY);
     }
     return () => {
+      const savedY = parseInt(document.body.dataset.scrollY || '0', 10);
       document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      window.scrollTo(0, savedY);
     };
   }, [showSearchOverlay]);
 
@@ -28,8 +49,12 @@ export default function Navbar() {
     setMounted(true);
     // Auth Check
     async function getAuth() {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        setUser(user);
+      } catch (err) {
+        console.warn("Supabase auth check in Navbar failed/stolen:", err.message);
+      }
     }
     getAuth();
 
@@ -155,10 +180,17 @@ export default function Navbar() {
           <div className="overlay-body">
             <h3 className="overlay-section-title">Pilih Genre (Kategori)</h3>
             <div className="genre-grid">
-              {['Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy', 'Romance', 'Sci-Fi', 'Slice of Life', 'Supernatural', 'Ecchi', 'Hentai'].map((g) => (
+              {[
+                'Action', 'Adventure', 'BDSM', 'Blowjob', 'Comedy', 'Cosplay Hentai', 'Creampie', 'Cheating', 
+                'Demon', 'Drama', 'Ecchi', 'Fantasy', 'Game', 'Gore', 'Harem', 'Hentai', 'Historical', 'Incest', 
+                'Isekai', 'JAV', 'JAV Cosplay', 'Josei', 'Loli', 'Magic', 'Martial Arts', 'Masturbation', 'Mecha', 'Milf', 'Military', 
+                'Music', 'Mystery', 'Netorare', 'Oppai', 'Psychological', 'Romance', 'School', 'School Girls', 
+                'Sci-Fi', 'Seinen', 'Shoujo', 'Shounen', 'Slice of Life', 'Sports', 'Super Power', 'Supernatural', 
+                'Suspense', 'Tentacles', 'Thriller', '3D Hentai', 'Uncensored', 'Yuri'
+              ].map((g) => (
                 <button
                   key={g}
-                  className={`genre-filter-tag ${g === 'Hentai' ? 'hentai-tag' : ''}`}
+                  className="genre-filter-tag"
                   onClick={() => {
                     setShowSearchOverlay(false);
                     router.push(`/search?genre=${encodeURIComponent(g)}`);

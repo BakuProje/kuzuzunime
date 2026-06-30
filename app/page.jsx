@@ -261,7 +261,24 @@ export default function HomePage() {
               const eps = epNumMatch ? `Ep ${epNumMatch[0]}` : (anime.episode ? `Ep ${anime.episode}` : '');
 
               return (
-                <div key={anime.url} className="hero-slide" onClick={() => router.push(`/anime/${encodeURIComponent(anime.url)}`)}>
+                <div 
+                  key={anime.url} 
+                  className="hero-slide" 
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      const dataToSave = {
+                        title: anime.title,
+                        image: anime.image || '/placeholder.jpg',
+                        rating: score,
+                        banner: anime.banner || anime.image || '/placeholder.jpg',
+                        genres: [],
+                        status: 'Ongoing'
+                      };
+                      sessionStorage.setItem('pending_anime_detail', JSON.stringify(dataToSave));
+                    }
+                    router.push(`/anime/${encodeURIComponent(anime.url)}`);
+                  }}
+                >
                   <img src={anime.banner || anime.image} className="hero-bg-blur" alt="" loading="lazy" aria-hidden="true" />
                   <img src={anime.image} className="hero-bg" alt={anime.title} loading="lazy" />
                   <div className="hero-overlay"></div>
@@ -353,7 +370,23 @@ export default function HomePage() {
               const viewCount = `${(Math.floor(Math.abs(anime.title.length * 9.2) % 600) + 300)}K`;
 
               return (
-                <div className="hot-scroll-column-featured" onClick={() => router.push(`/anime/${encodeURIComponent(anime.url)}`)}>
+                <div 
+                  className="hot-scroll-column-featured" 
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      const dataToSave = {
+                        title: anime.title,
+                        image: anime.image || '/placeholder.jpg',
+                        rating: score,
+                        banner: anime.image || '/placeholder.jpg',
+                        genres: [],
+                        status: 'Ongoing'
+                      };
+                      sessionStorage.setItem('pending_anime_detail', JSON.stringify(dataToSave));
+                    }
+                    router.push(`/anime/${encodeURIComponent(anime.url)}`);
+                  }}
+                >
                   <div className="hot-card-featured">
                     <div className="hot-rank-badge">#1</div>
                     <div className="hot-card-img-wrapper-featured">
@@ -411,7 +444,24 @@ export default function HomePage() {
                       const viewCount = `${(Math.floor(Math.abs(anime.title.length * 9.2) % 600) + 300)}K`;
 
                       return (
-                        <div key={anime.url} className="hot-card-stacked" onClick={() => router.push(`/anime/${encodeURIComponent(anime.url)}`)}>
+                        <div 
+                          key={anime.url} 
+                          className="hot-card-stacked" 
+                          onClick={() => {
+                            if (typeof window !== 'undefined') {
+                              const dataToSave = {
+                                title: anime.title,
+                                image: anime.image || '/placeholder.jpg',
+                                rating: score,
+                                banner: anime.image || '/placeholder.jpg',
+                                genres: [],
+                                status: 'Ongoing'
+                              };
+                              sessionStorage.setItem('pending_anime_detail', JSON.stringify(dataToSave));
+                            }
+                            router.push(`/anime/${encodeURIComponent(anime.url)}`);
+                          }}
+                        >
                           <div className="hot-rank-badge">#{rankNum}</div>
                           <div className="hot-card-img-wrapper-stacked">
                             <img src={anime.image || '/placeholder.jpg'} className="hot-card-bg-blur" alt="" loading="lazy" aria-hidden="true" />

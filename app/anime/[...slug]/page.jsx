@@ -51,10 +51,14 @@ export default function AnimeDetail() {
         const json = await res.json();
         if (json.success) {
           setData(prev => {
-            if (prev) {
-              return { ...prev, ...json.data };
+            const merged = { ...prev, ...json.data };
+            // Keep preloaded card cover image if API returns placeholder or fallback
+            const apiImage = json.data.image || '';
+            const isPlaceholder = !apiImage || apiImage === '/placeholder.jpg' || apiImage === '/Zunime.png';
+            if (prev && prev.image && prev.image !== '/Zunime.png' && prev.image !== '/placeholder.jpg' && isPlaceholder) {
+              merged.image = prev.image;
             }
-            return json.data;
+            return merged;
           });
           checkFavStatus(slug);
           saveToHistory(json.data);
@@ -88,6 +92,9 @@ export default function AnimeDetail() {
 
     fetchData();
     getSession();
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('pending_anime_detail');
+    }
   }, [slug]);
 
   const checkFavStatus = async (url) => {
@@ -125,14 +132,35 @@ export default function AnimeDetail() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    await supabase.from('watch_history').upsert({
-      user_id: user.id,
-      anime_url: slug,
-      title: anime.title,
-      image: anime.image,
-      score: anime.rating || anime.info?.skor || '8.5',
-      updated_at: new Date()
-    }, { onConflict: 'user_id, anime_url' });
+    const { data: existing } = await supabase
+      .from('watch_history')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('anime_url', slug)
+      .maybeSingle();
+
+    if (existing) {
+      await supabase
+        .from('watch_history')
+        .update({
+          title: anime.title,
+          image: anime.image,
+          score: anime.rating || anime.info?.skor || '8.5',
+          updated_at: new Date()
+        })
+        .eq('id', existing.id);
+    } else {
+      await supabase
+        .from('watch_history')
+        .insert({
+          user_id: user.id,
+          anime_url: slug,
+          title: anime.title,
+          image: anime.image,
+          score: anime.rating || anime.info?.skor || '8.5',
+          updated_at: new Date()
+        });
+    }
   };
 
   if (loading) return <div className="section-container"><Skeleton className="hero-slide" style={{ height: '400px' }} /></div>;
@@ -209,7 +237,7 @@ export default function AnimeDetail() {
 
           <div className="premium-synopsis-section">
             <h3>Synopsis</h3>
-            <p style={{ textAlign: 'justify' }}>{data.description || (data.episodes ? 'Tidak ada deskripsi tersedia.' : 'Memuat deskripsi...')}</p>
+            <p style={{ textAlign: 'left' }}>{data.description || (data.episodes ? 'Tidak ada deskripsi tersedia.' : 'Memuat deskripsi...')}</p>
           </div>
 
           {data.relatedAnime && data.relatedAnime.length > 0 && (

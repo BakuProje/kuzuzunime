@@ -42,8 +42,21 @@ export default function EpisodeList({ episodes, progressList = [], variant = 'gr
     });
   }
 
-  // Sort episodes ascending (episode 1 first)
-  const sortedEpisodes = [...episodes].reverse();
+  // Sort episodes ascending (episode 1 first, left to right)
+  const sortedEpisodes = episodes.map((ep, idx) => ({ ep, idx })).sort((a, b) => {
+    const firstMatch = episodes[0]?.title.match(/(?:Episode|Eps|Ep)\s*(\d+(\.\d+)?)/i);
+    const lastMatch = episodes[episodes.length - 1]?.title.match(/(?:Episode|Eps|Ep)\s*(\d+(\.\d+)?)/i);
+    if (firstMatch && lastMatch) {
+      const firstNum = parseFloat(firstMatch[1]);
+      const lastNum = parseFloat(lastMatch[1]);
+      if (firstNum > lastNum) {
+        // Original is descending (e.g. Samehadaku), reverse to make it ascending
+        return b.idx - a.idx;
+      }
+    }
+    // Keep original ascending order
+    return a.idx - b.idx;
+  }).map(x => x.ep);
 
   // Custom SVG Lock Icon matching the premium theme
   const LockIcon = () => (

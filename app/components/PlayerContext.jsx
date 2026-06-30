@@ -101,16 +101,35 @@ export function PlayerProvider({ children }) {
         [cleanEpUrl]: { progress: progressSec, duration: duration }
       }));
 
-      await supabase.from('watch_progress').upsert({
-        user_id: user.id,
-        anime_id: cleanAnimeUrl,
-        episode_id: cleanEpUrl,
-        anime_title: anime?.title || 'Anime',
-        anime_image: anime?.image || '/Zunime.png',
-        progress: progressSec,
-        duration: duration,
-        updated_at: new Date()
-      }, { onConflict: 'user_id,episode_id' });
+      const { data: existing } = await supabase
+        .from('watch_progress')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('episode_id', cleanEpUrl)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase
+          .from('watch_progress')
+          .update({
+            progress: progressSec,
+            updated_at: new Date()
+          })
+          .eq('id', existing.id);
+      } else {
+        await supabase
+          .from('watch_progress')
+          .insert({
+            user_id: user.id,
+            anime_id: cleanAnimeUrl,
+            episode_id: cleanEpUrl,
+            anime_title: anime?.title || 'Anime',
+            anime_image: anime?.image || '/Zunime.png',
+            progress: progressSec,
+            duration: duration,
+            updated_at: new Date()
+          });
+      }
     } catch (e) {
       console.error('Error saving progress in global context:', e);
     }

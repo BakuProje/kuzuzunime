@@ -56,7 +56,24 @@ export default function FavoritePage() {
               {favorites.map((anime, idx) => {
                 const views = (idx * 12 + 50).toFixed(1) + 'K';
                 return (
-                  <div key={idx} className="fav-card" onClick={() => router.push(`/anime/${encodeURIComponent(anime.url)}`)}>
+                  <div 
+                    key={idx} 
+                    className="fav-card" 
+                    onClick={() => {
+                      if (typeof window !== 'undefined') {
+                        const dataToSave = {
+                          title: anime.title,
+                          image: anime.image,
+                          rating: anime.score,
+                          banner: anime.image,
+                          genres: [],
+                          status: anime.status || 'Ongoing'
+                        };
+                        sessionStorage.setItem('pending_anime_detail', JSON.stringify(dataToSave));
+                      }
+                      router.push(`/anime/${encodeURIComponent(anime.url)}`);
+                    }}
+                  >
                     <div className="fav-img-wrapper">
                       <img src={anime.image} className="fav-card-img" loading="lazy" alt={anime.title} />
                       <div className="fav-rating-tag">⭐ {anime.score}</div>

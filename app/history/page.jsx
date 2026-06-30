@@ -57,7 +57,24 @@ export default function HistoryPage() {
                   const durStr = `${Math.floor(item.progress/60)}:${(item.progress%60).toString().padStart(2,'0')} / 24:00`;
                   
                   return (
-                    <div key={idx} className="history-card" onClick={() => router.push(`/anime/${encodeURIComponent(item.anime_id)}`)}>
+                    <div 
+                      key={idx} 
+                      className="history-card" 
+                      onClick={() => {
+                        if (typeof window !== 'undefined') {
+                          const dataToSave = {
+                            title: item.anime_title || 'Anime',
+                            image: item.anime_image || '/Zunime.png',
+                            rating: '8.5',
+                            banner: item.anime_image || '/Zunime.png',
+                            genres: [],
+                            status: 'Ongoing'
+                          };
+                          sessionStorage.setItem('pending_anime_detail', JSON.stringify(dataToSave));
+                        }
+                        router.push(`/anime/${encodeURIComponent(item.anime_id)}`);
+                      }}
+                    >
                         <div className="history-card-img-wrapper">
                             <img 
                               src={item.anime_image || '/Zunime.png'} 

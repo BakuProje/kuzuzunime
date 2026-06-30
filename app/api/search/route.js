@@ -1,5 +1,159 @@
 import { NextResponse } from 'next/server';
 import { search, getAniListData, cleanTitle, getSimilarity } from '@/lib/scraper';
+import dns from 'dns';
+import https from 'https';
+import axios from 'axios';
+import * as cheerio from 'cheerio';
+
+const dnsCache = new Map();
+
+async function resolveDnsDoH(hostname) {
+  if (dnsCache.has(hostname)) {
+    return dnsCache.get(hostname);
+  }
+  const dnsServers = ['8.8.8.8', '1.1.1.1', '9.9.9.9'];
+  const agent = new https.Agent({ rejectUnauthorized: false });
+  
+  for (const dnsIp of dnsServers) {
+    try {
+      const hostHeader = dnsIp === '8.8.8.8' ? 'dns.google' : (dnsIp === '1.1.1.1' ? 'cloudflare-dns.com' : 'dns.quad9.net');
+      const res = await axios.get(`https://${dnsIp}/resolve?name=${hostname}&type=A`, {
+        httpsAgent: agent,
+        headers: { 'Host': hostHeader },
+        timeout: 2500
+      });
+      if (res.data && res.data.Answer) {
+        const ips = res.data.Answer.filter(ans => ans.type === 1).map(ans => ans.data);
+        if (ips.length > 0) {
+          dnsCache.set(hostname, ips[0]);
+          return ips[0];
+        }
+      }
+    } catch (err) {
+      console.warn(`[DoH Warning] Failed resolving ${hostname} via ${dnsIp}:`, err.message);
+    }
+  }
+  return null;
+}
+
+async function axiosGetRetry(url, config = {}, retries = 3, delay = 1000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await axios.get(url, config);
+    } catch (err) {
+      const isRetryable = err.code === 'ECONNRESET' || err.code === 'ETIMEDOUT' || err.message.includes('timeout') || err.message.includes('Network Error') || err.response?.status === 503;
+      if (isRetryable && i < retries - 1) {
+        console.warn(`[Network Retry] GET ${url} failed (${err.code || err.message}). Retrying in ${delay}ms... (Attempt ${i + 1}/${retries})`);
+        await new Promise(r => setTimeout(r, delay));
+      } else {
+        throw err;
+      }
+    }
+  }
+}
+
+function customLookup(hostname, options, callback) {
+  if (typeof options === 'function') {
+    callback = options;
+    options = {};
+  }
+  if (hostname.includes('nekopoi.care') || hostname.includes('nekopoi.org')) {
+    resolveDnsDoH(hostname).then(ip => {
+      if (ip) {
+        if (options.all) {
+          callback(null, [{ address: ip, family: 4 }]);
+        } else {
+          callback(null, ip, 4);
+        }
+      } else {
+        callback(new Error(`ENOENT: DoH resolution failed for ${hostname}`), null, null);
+      }
+    }).catch(err => {
+      callback(err, null, null);
+    });
+    return;
+  }
+  return dns.lookup(hostname, options, callback);
+}
+
+const dohAgent = new https.Agent({
+  lookup: customLookup,
+  rejectUnauthorized: false
+});
+
+function getNekopoiUrlForGenre(genre, page = 1) {
+  const g = genre.toLowerCase().trim();
+  let path = '';
+  if (g === 'hentai') {
+    path = 'category/hentai';
+  } else if (g === '3d hentai' || g === '3d') {
+    path = 'category/3d-hentai';
+  } else if (g === 'cosplay hentai' || g === 'cosplay') {
+    path = 'category/cosplay-hentai';
+  } else if (g === 'jav') {
+    path = 'category/jav';
+  } else if (g === 'jav cosplay') {
+    path = 'category/jav-cosplay';
+  } else {
+    // Treat as tag: /tag/genre-name
+    const slug = g.replace(/\s+/g, '-');
+    path = `tag/${slug}`;
+  }
+  
+  return page > 1 
+    ? `https://nekopoi.care/${path}/page/${page}/`
+    : `https://nekopoi.care/${path}/`;
+}
+
+async function scrapeNekopoiGenre(genre, page = 1) {
+  const url = getNekopoiUrlForGenre(genre, page);
+  console.log(`[Nekopoi Scraper] Fetching category page: ${url}`);
+  
+  const res = await axiosGetRetry(url, {
+    httpsAgent: dohAgent,
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
+    },
+    timeout: 8000
+  });
+
+  const $ = cheerio.load(res.data);
+  const items = [];
+
+  $('a.nk-search-item').each((i, el) => {
+    const href = $(el).attr('href') || '';
+    const title = $(el).find('h2').text().trim();
+    const synopsis = $(el).find('p').text().trim();
+    
+    // Parse background-image URL
+    const styleAttr = $(el).find('.nk-search-thumb').attr('style') || '';
+    const imgMatch = styleAttr.match(/url\(['"]?([^'"]+)['"]?\)/);
+    let image = imgMatch ? imgMatch[1] : '/Zunime.png';
+    if (image && image.startsWith('http')) {
+      image = `/api/image-proxy?url=${encodeURIComponent(image)}`;
+    }
+
+    const slug = href.replace(/\/$/, '').split('/').pop();
+
+    if (slug && title) {
+      items.push({
+        title,
+        altTitle: 'Hentai',
+        url: `/anime/hentai-${slug}/`,
+        image,
+        banner: image,
+        score: '9.0',
+        episode: 'Recent',
+        status: 'Recent',
+        type: 'Hentai',
+        genres: ['Hentai', genre],
+        synopsis: synopsis || `Nonton anime hentai ${title} sub indo gratis hanya di ZUNIME.`
+      });
+    }
+  });
+
+  return items;
+}
 
 // Simple in-memory cache
 const searchCache = new Map();
@@ -12,7 +166,12 @@ export async function GET(request) {
 
   // Genre Filter Route
   if (genre) {
-    const isHentai = genre.toLowerCase() === 'hentai';
+    const HENTAI_GENRES = [
+      'hentai', '3d hentai', '3d', 'cosplay hentai', 'cosplay', 'milf', 'netorare', 'ntr', 
+      'incest', 'oppai', 'school girls', 'loli', 'yuri', 'creampie', 'masturbation', 
+      'blowjob', 'bdsm', 'tentacles', 'cheating', 'uncensored', 'jav', 'jav cosplay'
+    ];
+    const isHentai = HENTAI_GENRES.includes(genre.toLowerCase().trim());
     const cacheKey = `genre-${genre.toLowerCase()}`;
     
     // Check Cache
@@ -26,35 +185,28 @@ export async function GET(request) {
     // Nekopoi Scraper for Hentai Genre
     if (isHentai) {
       try {
-        const nekopoi = require('nekopoi-scraper');
-        const listData = await nekopoi.list('hentai', 1);
-        if (listData && !listData.error && Array.isArray(listData)) {
-          const mappedList = listData.map(item => {
-            const url = `/anime/hentai-${item.id}/`;
-            return {
-              title: item.title,
-              altTitle: 'Hentai',
-              url: url,
-              image: item.image,
-              banner: item.image,
-              score: '9.0',
-              episode: 'Ongoing',
-              status: 'Ongoing',
-              type: 'Hentai',
-              genres: ['Hentai'],
-              synopsis: `Nonton anime hentai ${item.title} sub indo gratis hanya di ZUNIME. Nikmati streaming lancar dengan kualitas HD.`
-            };
-          });
-
+        console.log(`[Nekopoi Scraper] Querying live Hentai sub-genre "${genre}" listing...`);
+        const results = await Promise.all([
+          scrapeNekopoiGenre(genre, 1).catch(() => []),
+          scrapeNekopoiGenre(genre, 2).catch(() => []),
+          scrapeNekopoiGenre(genre, 3).catch(() => [])
+        ]);
+        const mappedList = [...results[0], ...results[1], ...results[2]];
+        
+        if (mappedList && mappedList.length > 0) {
           searchCache.set(cacheKey, {
             timestamp: Date.now(),
             data: mappedList
           });
-
           return NextResponse.json({ success: true, data: mappedList });
         }
       } catch (nekopoiErr) {
-        console.error("Nekopoi scraper failed, falling back to AniList Hentai:", nekopoiErr.message);
+        console.error("Nekopoi category scraper failed:", nekopoiErr.message);
+      }
+
+      const gClean = genre.toLowerCase().trim();
+      if (gClean === 'jav' || gClean === 'jav cosplay') {
+        return NextResponse.json({ success: true, data: [] });
       }
 
       // Fallback: AniList Hentai Query if Nekopoi fails
@@ -65,7 +217,7 @@ export async function GET(request) {
           body: JSON.stringify({
             query: `
               query ($genre: String) {
-                Page(page: 1, perPage: 40) {
+                Page(page: 1, perPage: 80) {
                   media(genre: $genre, type: ANIME, isAdult: true, sort: POPULARITY_DESC) {
                     id
                     title { romaji english }
@@ -129,7 +281,7 @@ export async function GET(request) {
         body: JSON.stringify({
           query: `
             query ($genre: String) {
-              Page(page: 1, perPage: 40) {
+              Page(page: 1, perPage: 80) {
                 media(genre: $genre, type: ANIME, sort: POPULARITY_DESC) {
                   id
                   title { romaji english }

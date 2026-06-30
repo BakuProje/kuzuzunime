@@ -102,9 +102,6 @@ export default function WatchPage() {
             const parentJson = await parentRes.json();
             if (parentJson.success && isMounted) {
               setParentData(parentJson.data);
-              
-              // Trigger progress upsert & refresh
-              await saveProgress(slug, parent, parentJson.data);
               fetchProgress(parent);
             }
           }
@@ -122,18 +119,18 @@ export default function WatchPage() {
 
   // Synchronize local stream/metadata updates to global player context
   useEffect(() => {
-    if (data && currentStream) {
+    if (data) {
       const parent = getParentAnimeSlug(slug);
       const parentTitle = parentData ? parentData.title : data.title.split(' Episode ')[0];
       playEpisode({
         slug: slug,
         title: data.title,
         parentTitle: parentTitle,
-        currentStream: currentStream,
+        currentStream: currentStream || '',
         parentData: parentData,
         parentSlug: parent,
         activeServer: activeServer,
-        streams: data.streams
+        streams: data.streams || []
       });
       setIsMinimized(false);
     }
@@ -159,16 +156,35 @@ export default function WatchPage() {
       const cleanEp = episodeUrl ? episodeUrl.replace(/^\/|\/$/g, '').replace(/^(anime|watch)\//, '') : '';
       const cleanAnime = animeUrl ? animeUrl.replace(/^\/|\/$/g, '').replace(/^(anime|watch)\//, '') : '';
       
-      await supabase.from('watch_progress').upsert({
-        user_id: user.id,
-        anime_id: cleanAnime,
-        episode_id: cleanEp,
-        anime_title: anime.title,
-        anime_image: anime.image,
-        progress: actualProgress,
-        duration: actualDuration,
-        updated_at: new Date()
-      }, { onConflict: 'user_id,episode_id' });
+      const { data: existing } = await supabase
+        .from('watch_progress')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('episode_id', cleanEp)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase
+          .from('watch_progress')
+          .update({
+            progress: actualProgress,
+            updated_at: new Date()
+          })
+          .eq('id', existing.id);
+      } else {
+        await supabase
+          .from('watch_progress')
+          .insert({
+            user_id: user.id,
+            anime_id: cleanAnime,
+            episode_id: cleanEp,
+            anime_title: anime.title,
+            anime_image: anime.image,
+            progress: actualProgress,
+            duration: actualDuration,
+            updated_at: new Date()
+          });
+      }
     } catch (e) {
       console.error('Error saving progress:', e);
     }
@@ -344,7 +360,25 @@ export default function WatchPage() {
             </h2>
             <div className="horizontal-scroll" style={{ display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '10px' }}>
               {parentData.relatedAnime.map((rel) => (
-                <div key={rel.url || rel.id} className="scroll-card" style={{ minWidth: '140px', cursor: 'pointer' }} onClick={() => router.push(`/anime/${encodeURIComponent(rel.id)}`)}>
+                <div 
+                  key={rel.url || rel.id} 
+                  className="scroll-card" 
+                  style={{ minWidth: '140px', cursor: 'pointer' }} 
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      const dataToSave = {
+                        title: rel.title,
+                        image: rel.image,
+                        rating: rel.rating || '8.5',
+                        banner: rel.image,
+                        genres: [],
+                        status: 'Ongoing'
+                      };
+                      sessionStorage.setItem('pending_anime_detail', JSON.stringify(dataToSave));
+                    }
+                    router.push(`/anime/${encodeURIComponent(rel.id)}`);
+                  }}
+                >
                   <div className="scroll-card-img">
                     <img src={rel.image} alt={rel.title} />
                     <div className="ep-badge">⭐ {rel.rating}</div>

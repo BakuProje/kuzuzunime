@@ -60,7 +60,20 @@ function SearchPageContent() {
               <div 
                 key={anime.url} 
                 className="search-item-modern fade-slide-up visible"
-                onClick={() => router.push(`/anime/${encodeURIComponent(anime.url)}`)}
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    const dataToSave = {
+                      title: anime.title,
+                      image: anime.image || '/placeholder.jpg',
+                      rating: anime.rating || anime.score || '8.5',
+                      banner: anime.banner || anime.image || '/placeholder.jpg',
+                      genres: anime.genres || [],
+                      status: anime.status || 'Ongoing'
+                    };
+                    sessionStorage.setItem('pending_anime_detail', JSON.stringify(dataToSave));
+                  }
+                  router.push(`/anime/${encodeURIComponent(anime.url)}`);
+                }}
               >
                 <div className="item-thumb-wrapper">
                    <img src={anime.image} loading="lazy" alt={anime.title} />

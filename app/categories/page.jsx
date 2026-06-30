@@ -3,22 +3,14 @@ import { useState, useEffect } from 'react';
 import AnimeCard from '@/app/components/AnimeCard';
 import Skeleton from '@/app/components/Skeleton';
 
-const GENRE_KEYWORDS = {
-    "Action": ["action", "shounen", "fight", "jujutsu", "kimetsu"],
-    "Adventure": ["adventure", "journey", "world", "isekai"],
-    "Comedy": ["comedy", "slice of life", "laugh", "bocchi"],
-    "Drama": ["drama", "cry", "love", "romance", "kanojo"],
-    "Fantasy": ["fantasy", "magic", "maou", "dragon", "hero"],
-    "Isekai": ["isekai", "reincarnation", "world", "slime", "tensei"],
-    "Magic": ["magic", "mahou", "witch", "wizard"],
-    "Romance": ["romance", "love", "kanojo", "couple"],
-    "School": ["school", "gakuen", "classroom", "student"],
-    "Sci-Fi": ["sci-fi", "science", "gundam", "mecha"],
-    "Slice of Life": ["slice of life", "daily", "chill", "camp"],
-    "Sports": ["sports", "soccer", "football", "blue lock", "haikyuu"]
-};
-
-const CATEGORIES = Object.keys(GENRE_KEYWORDS);
+const CATEGORIES = [
+  'Action', 'Adventure', 'BDSM', 'Blowjob', 'Comedy', 'Cosplay Hentai', 'Creampie', 'Cheating', 
+  'Demon', 'Drama', 'Ecchi', 'Fantasy', 'Game', 'Gore', 'Harem', 'Hentai', 'Historical', 'Incest', 
+  'Isekai', 'JAV', 'JAV Cosplay', 'Josei', 'Loli', 'Magic', 'Martial Arts', 'Masturbation', 'Mecha', 'Milf', 'Military', 
+  'Music', 'Mystery', 'Netorare', 'Oppai', 'Psychological', 'Romance', 'School', 'School Girls', 
+  'Sci-Fi', 'Seinen', 'Shoujo', 'Shounen', 'Slice of Life', 'Sports', 'Super Power', 'Supernatural', 
+  'Suspense', 'Tentacles', 'Thriller', '3D Hentai', 'Uncensored', 'Yuri'
+];
 
 export default function CategoriesPage() {
   const [selected, setSelected] = useState(CATEGORIES[0]);
@@ -29,22 +21,18 @@ export default function CategoriesPage() {
     async function fetchData() {
       setLoading(true);
       try {
-        const queries = GENRE_KEYWORDS[selected] || [selected];
-        const promises = queries.map(q => fetch(`/api/search?q=${encodeURIComponent(q)}`).then(res => res.json()).catch(() => ({ data: [] })));
-        const searchResults = await Promise.all(promises);
-        
-        let combined = [];
-        searchResults.forEach(res => {
-          if (res.success && Array.isArray(res.data)) {
-            combined = [...combined, ...res.data];
-          }
-        });
-
-        // Remove duplicates by URL
-        const unique = [ ...new Map(combined.map(item => [item.url, item])).values() ];
-        setResults(unique);
+        const url = `/api/search?genre=${encodeURIComponent(selected)}`;
+        const res = await fetch(url);
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          const unique = json.data.filter((v, i, a) => a.findIndex(t => t.url === v.url) === i);
+          setResults(unique);
+        } else {
+          setResults([]);
+        }
       } catch (e) {
         console.error(e);
+        setResults([]);
       } finally {
         setLoading(false);
       }

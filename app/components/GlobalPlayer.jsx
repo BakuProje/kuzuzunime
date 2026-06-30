@@ -156,8 +156,9 @@ export default function GlobalPlayer() {
     >
       {/* Video Viewport Frame — iframe is ALWAYS mounted, never changes src */}
       <div className="global-player-video-section" style={{ position: 'relative' }}>
-        {activeEpisode.currentStream && (
+        {activeEpisode.currentStream ? (
           <iframe
+            key="active-iframe"
             id="video-player-iframe"
             src={activeEpisode.currentStream}
             allowFullScreen
@@ -170,6 +171,32 @@ export default function GlobalPlayer() {
               display: 'block'
             }}
           ></iframe>
+        ) : (
+          <div 
+            key="maintenance-fallback"
+            style={{
+            width: '100%',
+            height: '100%',
+            background: '#050505',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            textAlign: 'center',
+            color: 'white',
+            aspectRatio: '16/9'
+          }}>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ff0000" strokeWidth="2" style={{ marginBottom: '10px' }}>
+              <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <h4 style={{ fontSize: '0.95rem', fontWeight: '800', marginBottom: '5px' }}>Server Sedang Sibuk / Maintenance</h4>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', maxWidth: '280px' }}>
+              Link video dari server Nekopoi/Samehadaku tidak tersedia saat ini. Silakan coba beberapa saat lagi.
+            </p>
+          </div>
         )}
       </div>
 

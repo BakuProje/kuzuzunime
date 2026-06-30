@@ -108,16 +108,13 @@ export default function ExpNotificationOverlay({ isVisible, onClose, data }) {
     };
   }, [isVisible, data, onClose]);
 
-  if (!isVisible || !data || Number(data.amount) <= 0) return null;
-
-  const { role } = data;
-  
-  // Ambil metadata level saat ini (animatif)
-  const currentInfo = getLevelData(currentLevel, role, data.isUnlimited);
+  const hasData = data && Number(data.amount) > 0;
+  const showContent = isVisible && hasData;
+  const currentInfo = hasData ? getLevelData(currentLevel, data.role, data.isUnlimited) : null;
 
   return (
     <AnimatePresence>
-      {isVisible && (
+      {showContent && currentInfo && (
         <div className="exp-overlay-fixed-container">
           {/* Backdrop Glassmorphism */}
           <motion.div

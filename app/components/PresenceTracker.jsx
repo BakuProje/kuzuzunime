@@ -63,20 +63,24 @@ export default function PresenceTracker() {
     // Handle visibility change (tab hidden/visible)
     const handleVisibilityChange = async () => {
       if (document.visibilityState === 'visible') {
-        // Re-track when tab becomes visible again
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (error) {
-          if (error.message.includes('Refresh Token') || error.message.includes('invalid')) {
-            await supabase.auth.signOut();
+        try {
+          // Re-track when tab becomes visible again
+          const { data: { user }, error } = await supabase.auth.getUser();
+          if (error) {
+            if (error.message.includes('Refresh Token') || error.message.includes('invalid')) {
+              await supabase.auth.signOut();
+            }
+            return;
           }
-          return;
-        }
-        if (user && channelRef.current) {
-          await channelRef.current.track({
-            user_id: user.id,
-            email: user.email,
-            online_at: new Date().toISOString(),
-          });
+          if (user && channelRef.current) {
+            await channelRef.current.track({
+              user_id: user.id,
+              email: user.email,
+              online_at: new Date().toISOString(),
+            });
+          }
+        } catch (err) {
+          console.warn("Visibility re-track ignored due to lock contention:", err.message);
         }
       }
     };

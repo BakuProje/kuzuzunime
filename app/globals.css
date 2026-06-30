@@ -88,7 +88,7 @@ body.full-view .bottomNav { display: none !important; }
 @keyframes fadeInOut { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
 
 .navbar {
-    position: fixed;
+    position: absolute;
     top: 0; left: 0; right: 0;
     height: 75px;
     background: var(--navbar-bg);
@@ -642,7 +642,16 @@ h2, h3 { font-size: 1.25rem; font-weight: 700; color: var(--text-main); }
 .premium-back-btn { position: absolute; top: 15px; left: 12px; background: transparent; border: none; color: white; padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); transition: transform 0.2s; }
 .premium-back-btn:hover { transform: translateX(-3px); }
 
-.premium-content { padding: 0 20px 40px; margin-top: -80px; position: relative; z-index: 5; }
+.premium-content { 
+  padding: 0 20px 40px; 
+  margin-top: -80px; 
+  position: relative; 
+  z-index: 5; 
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
 
 @media (min-width: 768px) {
   .premium-content {
@@ -4699,6 +4708,8 @@ body:has(#profile-view-v2), html:has(#profile-view-v2) {
   flex-direction: column;
   padding: 20px;
   animation: overlayFadeIn 0.2s ease-out;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 @keyframes overlayFadeIn {
@@ -4803,17 +4814,6 @@ body:has(#profile-view-v2), html:has(#profile-view-v2) {
   box-shadow: 0 4px 15px rgba(255, 31, 79, 0.35);
 }
 
-.genre-filter-tag.hentai-tag {
-  border-color: rgba(239, 68, 68, 0.35);
-  color: #ef4444;
-}
-
-.genre-filter-tag.hentai-tag:hover {
-  background: #ef4444;
-  color: white;
-  border-color: #ef4444;
-  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.45);
-}
 
 @media (max-width: 600px) {
   .overlay-header {
