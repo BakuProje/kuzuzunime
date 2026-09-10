@@ -63,7 +63,15 @@ export default function PremiumAnimeCard({ anime, isNew = false, views = null })
     <Link href={`/anime/${encodeURIComponent(url)}`} onClick={handlePreload}>
       <div className="premium-anime-card">
           <div className="premium-card-img-wrapper">
-              <img src={image || '/placeholder.jpg'} loading="lazy" alt={title} />
+              <img 
+                src={image || '/placeholder.jpg'} 
+                loading="lazy" 
+                alt="" 
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = '/placeholder.jpg';
+                }}
+              />
               
               {isNew && <div className="badge-top-left">New</div>}
               

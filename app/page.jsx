@@ -279,8 +279,27 @@ export default function HomePage() {
                     router.push(`/anime/${encodeURIComponent(anime.url)}`);
                   }}
                 >
-                  <img src={anime.banner || anime.image} className="hero-bg-blur" alt="" loading="lazy" aria-hidden="true" />
-                  <img src={anime.image} className="hero-bg" alt={anime.title} loading="lazy" />
+                  <img 
+                    src={anime.banner || anime.image || '/placeholder.jpg'} 
+                    className="hero-bg-blur" 
+                    alt="" 
+                    loading="lazy" 
+                    aria-hidden="true" 
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = '/placeholder.jpg';
+                    }}
+                  />
+                  <img 
+                    src={anime.image || '/placeholder.jpg'} 
+                    className="hero-bg" 
+                    alt="" 
+                    loading="lazy" 
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = '/placeholder.jpg';
+                    }}
+                  />
                   <div className="hero-overlay"></div>
                   <div className="hero-content">
                     {eps && <div className="hero-badge">{eps}</div>}
@@ -390,8 +409,27 @@ export default function HomePage() {
                   <div className="hot-card-featured">
                     <div className="hot-rank-badge">#1</div>
                     <div className="hot-card-img-wrapper-featured">
-                      <img src={anime.image || '/placeholder.jpg'} className="hot-card-bg-blur" alt="" loading="lazy" aria-hidden="true" />
-                      <img src={anime.image || '/placeholder.jpg'} className="hot-card-bg" alt={anime.title} loading="lazy" />
+                      <img 
+                        src={anime.image || '/placeholder.jpg'} 
+                        className="hot-card-bg-blur" 
+                        alt="" 
+                        loading="lazy" 
+                        aria-hidden="true" 
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = '/placeholder.jpg';
+                        }}
+                      />
+                      <img 
+                        src={anime.image || '/placeholder.jpg'} 
+                        className="hot-card-bg" 
+                        alt="" 
+                        loading="lazy" 
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = '/placeholder.jpg';
+                        }}
+                      />
                       <div className="hot-card-rating-badge">
                         <span>⭐</span> {score}
                       </div>
@@ -464,8 +502,27 @@ export default function HomePage() {
                         >
                           <div className="hot-rank-badge">#{rankNum}</div>
                           <div className="hot-card-img-wrapper-stacked">
-                            <img src={anime.image || '/placeholder.jpg'} className="hot-card-bg-blur" alt="" loading="lazy" aria-hidden="true" />
-                            <img src={anime.image || '/placeholder.jpg'} className="hot-card-bg" alt={anime.title} loading="lazy" />
+                      <img 
+                        src={anime.image || '/placeholder.jpg'} 
+                        className="hot-card-bg-blur" 
+                        alt="" 
+                        loading="lazy" 
+                        aria-hidden="true" 
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = '/placeholder.jpg';
+                        }}
+                      />
+                      <img 
+                        src={anime.image || '/placeholder.jpg'} 
+                        className="hot-card-bg" 
+                        alt="" 
+                        loading="lazy" 
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = '/placeholder.jpg';
+                        }}
+                      />
                             <div className="hot-card-rating-badge">
                               <span>⭐</span> {score}
                             </div>

@@ -1,48 +1,56 @@
 import { NextResponse } from 'next/server';
-import { search, getAniListData, cleanTitle } from '@/lib/scraper';
+import { search, getAniListData, cleanTitle, getAnimePoster } from '@/lib/scraper';
+import axios from 'axios';
+import * as cheerio from 'cheerio';
 
-const POPULAR_KEYWORDS = ["One Piece", "Naruto", "Bleach", "Solo Leveling", "Kaiju No. 8", "Jujutsu Kaisen", "Demon Slayer", "Mushoku Tensei", "Black Clover", "Hunter x Hunter", "Wind Breaker", "That Time I Got Reincarnated as a Slime", "My Hero Academia", "Haikyuu", "Attack on Titan", "Frieren", "Blue Lock", "Classroom of the Elite", "Oshi no Ko", "Dr. Stone"];
+const POPULAR_KEYWORDS = [
+  "One Piece", "Solo Leveling", "Bleach", "Jujutsu Kaisen", "Demon Slayer",
+  "Mushoku Tensei", "Black Clover", "Naruto", "Hunter x Hunter", "Wind Breaker",
+  "Frieren", "Blue Lock", "Classroom of the Elite", "Oshi no Ko", "Dr. Stone",
+  "Attack on Titan", "Haikyuu", "Kaiju No. 8"
+];
 
-// AniList-based fallback: fetch popular anime directly
-async function getAniListPopular(perPage = 50) {
-  const query = `
-    query ($page: Int, $perPage: Int) {
-      Page(page: $page, perPage: $perPage) {
-        media(sort: POPULARITY_DESC, type: ANIME) {
-          id
-          title { romaji english }
-          coverImage { extraLarge large }
-          bannerImage
-          averageScore
-          episodes
-          status
-          format
-          genres
-        }
-      }
-    }
-  `;
+const headers = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8'
+};
+
+async function getDirectPopular() {
   try {
-    const res = await fetch('https://graphql.anilist.co', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, variables: { page: 1, perPage } })
+    const res = await axios.get('https://samehadaku.pro/', { headers, timeout: 8000 });
+    const $ = cheerio.load(res.data);
+    const topList = [];
+    const seen = new Set();
+
+    $('a[href*="/anime/"]').each((i, el) => {
+      const $el = $(el);
+      const href = $el.attr('href');
+      if (!href || href.includes('anime-list') || seen.has(href)) return;
+      seen.add(href);
+
+      const title = $el.find('.sh-nm').text().trim() || $el.find('.j').text().trim() || $el.text().trim();
+      let image = $el.find('img').attr('src') || '';
+      if (image.includes('placeholder.svg')) image = '';
+
+      const eps = $el.find('.jarvis-eps').text().trim() || 'Ongoing';
+      const score = $el.find('.sh-rate').text().replace(/[★\s]/g, '').trim() || '8.5';
+
+      if (title && title.length > 1) {
+        topList.push({
+          title,
+          image: image || '/placeholder.jpg',
+          score,
+          episode: eps,
+          status: eps.toLowerCase().includes('tamat') ? 'Completed' : 'Ongoing',
+          type: 'TV',
+          url: href.startsWith('http') ? href.replace(/^https?:\/\/[^\/]+/, '') : href
+        });
+      }
     });
-    const json = await res.json();
-    const mediaList = json?.data?.Page?.media || [];
-    return mediaList.map(m => ({
-      title: m.title?.romaji || m.title?.english || 'Unknown',
-      url: `/anime/${(m.title?.romaji || m.title?.english || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/,'')}-sub-indo/`,
-      image: m.coverImage?.extraLarge || m.coverImage?.large,
-      score: m.averageScore ? (m.averageScore / 10).toFixed(1) : '8.5',
-      episode: m.episodes ? m.episodes.toString() : (m.status === 'RELEASING' ? 'Ongoing' : 'Tamat'),
-      status: m.status === 'RELEASING' ? 'Ongoing' : (m.status === 'FINISHED' ? 'Completed' : m.status),
-      type: m.format || 'TV',
-      genres: m.genres || [],
-      anilistId: m.id
-    }));
+
+    return topList;
   } catch (e) {
-    console.error('AniList popular fallback error:', e?.message || e);
+    console.error('getDirectPopular error:', e?.message);
     return [];
   }
 }
@@ -51,7 +59,7 @@ async function getAniListPopular(perPage = 50) {
 if (!global._popularCache) {
   global._popularCache = { data: null, timestamp: 0 };
 }
-const CACHE_TTL = 1800 * 1000; // 30 minutes
+const CACHE_TTL = 900 * 1000; // 15 minutes
 
 export async function GET() {
   if (global._popularCache.data && (Date.now() - global._popularCache.timestamp < CACHE_TTL)) {
@@ -60,33 +68,36 @@ export async function GET() {
   }
 
   try {
-    const searchPromises = POPULAR_KEYWORDS.map(k => search(k));
+    // 1. Fetch top list from Samehadaku Home
+    const directPopular = await getDirectPopular();
+
+    // 2. Search popular keywords
+    const searchPromises = POPULAR_KEYWORDS.map(k => search(k).catch(() => []));
     const searchResults = await Promise.all(searchPromises);
-    
-    const allResults = searchResults.flat().filter((v, i, a) => a.findIndex(t => t.url === v.url) === i);
-    
-    // If Samehadaku search returned nothing, use AniList fallback
+
+    const merged = [...directPopular, ...searchResults.flat()];
+    const allResults = merged.filter((v, i, a) => a.findIndex(t => t.url === v.url) === i);
+
     if (allResults.length === 0) {
-      console.log('[/api/popular] Samehadaku down, using AniList fallback');
-      const fallback = await getAniListPopular(50);
-      if (fallback.length > 0) {
-        global._popularCache.data = fallback;
-        global._popularCache.timestamp = Date.now();
-      }
-      return NextResponse.json({ success: true, data: fallback });
+      return NextResponse.json({ success: true, data: [] });
     }
 
     const enrichedData = await Promise.all(allResults.slice(0, 50).map(async (item) => {
       try {
         const aniData = await getAniListData(cleanTitle(item.title));
         const rawStatus = aniData?.status || item.status;
-        const normalizedStatus = rawStatus === 'FINISHED' ? 'Completed' : (rawStatus === 'RELEASING' ? 'Ongoing' : rawStatus);
+        const normalizedStatus = rawStatus === 'FINISHED' ? 'Completed' : (rawStatus === 'RELEASING' ? 'Ongoing' : rawStatus || 'Ongoing');
+        let finalImg = (item.image && !item.image.includes('placeholder')) ? item.image : (aniData?.poster || item.image);
+        if (!finalImg || finalImg.includes('placeholder')) {
+          finalImg = await getAnimePoster(item.title, item.image);
+        }
+
         return {
           ...item,
-          score: aniData?.rating || item.score || '8.5',
-          episode: aniData?.totalEpisodes ? aniData.totalEpisodes.toString() : (normalizedStatus === 'Completed' ? 'Tamat' : 'Ongoing'),
+          score: (item.score && item.score !== 'N/A' && item.score !== '8.5') ? item.score : (aniData?.rating || item.score || '8.5'),
+          episode: aniData?.totalEpisodes ? `${aniData.totalEpisodes} Eps` : item.episode || (normalizedStatus === 'Completed' ? 'Tamat' : 'Ongoing'),
           status: normalizedStatus,
-          image: aniData?.poster || item.image || aniData?.banner
+          image: finalImg
         };
       } catch (err) {
         return {
@@ -104,15 +115,6 @@ export async function GET() {
     return NextResponse.json({ success: true, data: enrichedData });
   } catch (e) {
     console.error('[/api/popular] Error:', e?.message || e);
-    // Fallback to AniList
-    try {
-      const fallback = await getAniListPopular(50);
-      if (fallback.length > 0) {
-        global._popularCache.data = fallback;
-        global._popularCache.timestamp = Date.now();
-        return NextResponse.json({ success: true, data: fallback });
-      }
-    } catch (_) {}
-    return NextResponse.json({ success: true, data: [] });
+    return NextResponse.json({ success: false, data: [] }, { status: 500 });
   }
 }

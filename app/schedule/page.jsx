@@ -157,7 +157,15 @@ export default function SchedulePage() {
                   <div className="schedule-time-bar" style={{ background: anime.status === 'Akan Tayang' ? '#3b82f6' : '#fbbf24' }}></div>
                   <div className="schedule-time">{anime.time} <span style={{fontSize: '0.6rem', opacity: 0.6, display: 'block'}}>WIB</span></div>
                   <div className="schedule-img-wrapper">
-                    <img src={anime.image} alt={anime.title} loading="lazy" />
+                    <img 
+                      src={anime.image || '/placeholder.jpg'} 
+                      alt="" 
+                      loading="lazy" 
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = '/placeholder.jpg';
+                      }}
+                    />
                   </div>
                   <div className="schedule-info">
                     <div className="schedule-title">{anime.title}</div>

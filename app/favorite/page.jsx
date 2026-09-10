@@ -75,7 +75,16 @@ export default function FavoritePage() {
                     }}
                   >
                     <div className="fav-img-wrapper">
-                      <img src={anime.image} className="fav-card-img" loading="lazy" alt={anime.title} />
+                      <img 
+                        src={anime.image || '/placeholder.jpg'} 
+                        className="fav-card-img" 
+                        loading="lazy" 
+                        alt="" 
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = '/placeholder.jpg';
+                        }}
+                      />
                       <div className="fav-rating-tag">⭐ {anime.score}</div>
                       <div className="fav-ep-tag">{anime.episode}</div>
                     </div>

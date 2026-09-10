@@ -277,13 +277,21 @@ export default function WatchPage() {
 
         {/* Profile/Channel bar below the pills */}
         <div className="watch-profile-row" style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '25px' }}>
-          <img src={parentData?.image || data.image || '/Zunime.png'} alt="Cover" style={{
-            width: '44px',
-            height: '44px',
-            borderRadius: '50%',
-            objectFit: 'cover',
-            border: '2px solid rgba(255,255,255,0.1)'
-          }} />
+          <img 
+            src={parentData?.image || data.image || '/Zunime.png'} 
+            alt="" 
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = '/Zunime.png';
+            }}
+            style={{
+              width: '44px',
+              height: '44px',
+              borderRadius: '50%',
+              objectFit: 'cover',
+              border: '2px solid rgba(255,255,255,0.1)'
+            }} 
+          />
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <h2 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'white', margin: 0, lineHeight: '1.2' }}>
               {parentTitle}
@@ -380,7 +388,14 @@ export default function WatchPage() {
                   }}
                 >
                   <div className="scroll-card-img">
-                    <img src={rel.image} alt={rel.title} />
+                    <img 
+                      src={rel.image || '/placeholder.jpg'} 
+                      alt="" 
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = '/placeholder.jpg';
+                      }}
+                    />
                     <div className="ep-badge">⭐ {rel.rating}</div>
                   </div>
                   <div className="scroll-card-title">{rel.title}</div>

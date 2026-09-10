@@ -180,7 +180,15 @@ export default function AnimeDetail() {
     <div id="detail-view" className="section-container page-transition">
       <div className="premium-detail-header">
         <div className="premium-cover-wrapper">
-          <img src={data.image} className="premium-cover-bg" alt="Cover" />
+          <img 
+            src={data.image || '/placeholder.jpg'} 
+            className="premium-cover-bg" 
+            alt="" 
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = '/placeholder.jpg';
+            }}
+          />
           <div className="premium-cover-overlay"></div>
           
           <button className="premium-back-btn" onClick={() => router.back()}>
@@ -260,7 +268,14 @@ export default function AnimeDetail() {
                     router.push(`/anime/${encodeURIComponent(rel.id)}`);
                   }}>
                     <div className="scroll-card-img">
-                      <img src={rel.image} alt={rel.title} />
+                      <img 
+                        src={rel.image || '/placeholder.jpg'} 
+                        alt="" 
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = '/placeholder.jpg';
+                        }}
+                      />
                       <div className="ep-badge">⭐ {rel.rating}</div>
                     </div>
                     <div className="scroll-card-title">{rel.title}</div>

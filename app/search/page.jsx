@@ -76,7 +76,15 @@ function SearchPageContent() {
                 }}
               >
                 <div className="item-thumb-wrapper">
-                   <img src={anime.image} loading="lazy" alt={anime.title} />
+                   <img 
+                     src={anime.image || '/placeholder.jpg'} 
+                     loading="lazy" 
+                     alt="" 
+                     onError={(e) => {
+                       e.currentTarget.onerror = null;
+                       e.currentTarget.src = '/placeholder.jpg';
+                     }}
+                   />
                    <div className="badge-rating-modern">⭐ {anime.rating || anime.score || '8.5'}</div>
                    {anime.episode && <div className="badge-ep-modern">Ep {anime.episode.replace('Episode', '').trim()}</div>}
                 </div>

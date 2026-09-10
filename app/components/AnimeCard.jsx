@@ -34,7 +34,15 @@ export default function AnimeCard({ anime }) {
     <Link href={`/anime/${encodeURIComponent(url)}`}>
       <div className="scroll-card">
           <div className="scroll-card-img">
-              <img src={image} loading="lazy" alt={title} />
+              <img 
+                src={image || '/placeholder.jpg'} 
+                loading="lazy" 
+                alt="" 
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = '/placeholder.jpg';
+                }} 
+              />
               <div className="ep-badge">
                 {!hasEpisode && <span style={{ color: '#ffcc00' }}>⭐ </span>}
                 {badgeContent}

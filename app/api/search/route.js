@@ -334,15 +334,30 @@ export async function GET(request) {
         };
       });
 
-      searchCache.set(cacheKey, {
-        timestamp: Date.now(),
-        data: mappedList
-      });
+      if (mappedList && mappedList.length > 0) {
+        searchCache.set(cacheKey, {
+          timestamp: Date.now(),
+          data: mappedList
+        });
 
-      return NextResponse.json({ success: true, data: mappedList });
+        return NextResponse.json({ success: true, data: mappedList });
+      }
+
+      // Fallback: search Samehadaku directly for this genre keyword
+      const samehadakuGenreResults = await search(genre).catch(() => []);
+      if (samehadakuGenreResults && samehadakuGenreResults.length > 0) {
+        searchCache.set(cacheKey, {
+          timestamp: Date.now(),
+          data: samehadakuGenreResults
+        });
+        return NextResponse.json({ success: true, data: samehadakuGenreResults });
+      }
+
+      return NextResponse.json({ success: true, data: [] });
     } catch (err) {
-      console.error("Genre search API error:", err);
-      return NextResponse.json({ success: false, data: [] });
+      console.error("Genre search API error, falling back to samehadaku search:", err);
+      const fallbackResults = await search(genre).catch(() => []);
+      return NextResponse.json({ success: true, data: fallbackResults });
     }
   }
 

@@ -316,8 +316,8 @@ export async function GET(request) {
       }
     }
     try {
-      if ((samehadakuUrl.startsWith('/anime/') || samehadakuUrl.startsWith('http')) && !isNekopoi) {
-        const unmatchedSlug = samehadakuUrl.replace(/^\/|\/$/g, '').replace(/^(anime|watch)\//, '');
+      if (!isNekopoi) {
+        const unmatchedSlug = samehadakuUrl.replace(/^\/|\/$/g, '').replace(/^(anime|nonton|watch)\//, '');
         // Discard if the slug is still a raw numeric ID (mapping failed) to prevent invalid API calls
         if (!/^\d+$/.test(unmatchedSlug) && !unmatchedSlug.startsWith('hentai-')) {
           const detailData = await detail(samehadakuUrl);
