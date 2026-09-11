@@ -385,98 +385,15 @@ export async function GET(request) {
   }
 
   try {
-    console.log("QUERY SEARCH:", query);
+    const results = await search(query);
 
-    // 3. PARALLEL FETCH (Samehadaku Search + AniList API)
-    const [samehadakuResults, aniListResults] = await Promise.all([
-      search(query).catch(e => {
-        console.error("Samehadaku search error:", e);
-        return [];
-      }),
-      fetch('https://graphql.anilist.co', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `
-            query ($search: String) {
-              Page(page: 1, perPage: 15) {
-                media(search: $search, type: ANIME, sort: SEARCH_MATCH) {
-                  id
-                  title { romaji english }
-                  coverImage { extraLarge large }
-                  bannerImage
-                  averageScore
-                  episodes
-                  status
-                  format
-                  genres
-                }
-              }
-            }
-          `,
-          variables: { search: query }
-        })
-      })
-      .then(async r => {
-        if (!r.ok) return [];
-        const json = await r.json();
-        return json?.data?.Page?.media || [];
-      })
-      .catch(e => {
-        console.error("AniList search error:", e);
-        return [];
-      })
-    ]);
-
-    // 4. MAP ANILIST DATA
-    const mappedAniList = aniListResults.map(m => {
-      const romaji = m.title?.romaji || '';
-      const english = m.title?.english || '';
-      const fallbackTitle = romaji || english || 'Unknown';
-      
-      // Clean slug format
-      const urlFriendlyTitle = (romaji || english || '')
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '');
-      const url = `/anime/${urlFriendlyTitle}-sub-indo/`;
-
-      return {
-        title: fallbackTitle,
-        altTitle: english && english !== romaji ? english : null,
-        url: url,
-        image: m.coverImage?.extraLarge || m.coverImage?.large,
-        banner: m.bannerImage,
-        score: m.averageScore ? (m.averageScore / 10).toFixed(1) : '8.5',
-        episode: m.episodes ? m.episodes.toString() : (m.status === 'RELEASING' ? 'Ongoing' : 'Tamat'),
-        status: m.status === 'RELEASING' ? 'Ongoing' : (m.status === 'FINISHED' ? 'Completed' : m.status),
-        type: m.format || 'TV',
-        genres: m.genres || []
-      };
-    });
-
-    // 5. PRIORITIZE SAMEHADAKU & DEDUPLICATE ANILIST FALLBACKS
-    const mergedList = [...samehadakuResults];
-
-    for (const aniItem of mappedAniList) {
-      const isDuplicate = samehadakuResults.some(sameItem => {
-        const titleSim = getSimilarity(sameItem.title, aniItem.title);
-        const altTitleSim = aniItem.altTitle ? getSimilarity(sameItem.title, aniItem.altTitle) : 0;
-        return titleSim > 0.75 || altTitleSim > 0.75;
-      });
-
-      if (!isDuplicate) {
-        mergedList.push(aniItem);
-      }
-    }
-
-    // 6. SAVE TO CACHE
+    // Save to Cache
     searchCache.set(query, {
       timestamp: Date.now(),
-      data: mergedList
+      data: results
     });
 
-    return NextResponse.json({ success: true, data: mergedList });
+    return NextResponse.json({ success: true, data: results });
   } catch (error) {
     console.error("SEARCH API ERROR:", error);
     return NextResponse.json({ success: false, data: [], message: error?.message || "Search failed" }, { status: 200 });
