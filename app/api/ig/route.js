@@ -33,7 +33,7 @@ export async function GET() {
     return NextResponse.json({
       success: false,
       data: {
-        followers: "1.3K", // Default fallback as requested
+        followers: "1.2K", // Default fallback as requested
         username: "kuzuroken.site",
         full_name: "Kuzu Roken",
         biography: "Zunime Developer",
