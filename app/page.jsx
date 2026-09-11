@@ -147,73 +147,59 @@ export default function HomePage() {
     let isMounted = true;
     
     async function fetchCoreData() {
-      const cacheTimeKey = 'zunime_core_cache_time';
-      const cachedTime = localStorage.getItem(cacheTimeKey);
-      const cachedLatest = localStorage.getItem('zunime_latest_cache');
-      const cachedPopular = localStorage.getItem('zunime_popular_cache');
+      const cacheTimeKey = 'zunime_core_cache_time_v2';
+      let parsedLatest = [];
+      let parsedPopular = [];
+      try {
+        const cachedTime = localStorage.getItem(cacheTimeKey);
+        const cachedLatest = localStorage.getItem('zunime_latest_cache_v2');
+        const cachedPopular = localStorage.getItem('zunime_popular_cache_v2');
+        if (cachedLatest) parsedLatest = JSON.parse(cachedLatest);
+        if (cachedPopular) parsedPopular = JSON.parse(cachedPopular);
 
-      // Cache valid for 10 minutes
-      const isCacheValid = cachedTime && 
-                           cachedLatest && 
-                           cachedPopular && 
-                           (Date.now() - parseInt(cachedTime) < 600000);
+        const isCacheValid = cachedTime && 
+                             Array.isArray(parsedLatest) && parsedLatest.length > 0 &&
+                             Array.isArray(parsedPopular) && parsedPopular.length > 0 &&
+                             (Date.now() - parseInt(cachedTime) < 600000);
 
-      if (isCacheValid) {
+        if (isCacheValid) {
+          if (isMounted) {
+            setLatest(parsedLatest);
+            setHotAnime(parsedPopular);
+            setLoading(false);
+          }
+        }
+      } catch (err) {}
+
+      // Always ensure fresh data is fetched
+      try {
+        const [latestRes, popularRes] = await Promise.all([
+          fetch('/api/latest').then(r => r.json()).catch(() => ({ success: false, data: [] })),
+          fetch('/api/popular').then(r => r.json()).catch(() => ({ success: false, data: [] }))
+        ]);
+
         if (isMounted) {
-          setLatest(JSON.parse(cachedLatest));
-          setHotAnime(JSON.parse(cachedPopular));
-          setLoading(false);
-        }
-        
-        // Silent background refresh
-        try {
-          const [latestRes, popularRes] = await Promise.all([
-            fetch('/api/latest').then(r => r.json()),
-            fetch('/api/popular').then(r => r.json())
-          ]);
-          
-          if (isMounted) {
-            if (latestRes.success) {
-              const freshLatest = removeDuplicates(latestRes.data);
-              setLatest(freshLatest);
-              localStorage.setItem('zunime_latest_cache', JSON.stringify(freshLatest));
-            }
-            if (popularRes.success) {
-              const freshPopular = removeDuplicates(popularRes.data);
-              setHotAnime(freshPopular);
-              localStorage.setItem('zunime_popular_cache', JSON.stringify(freshPopular));
-            }
-            localStorage.setItem(cacheTimeKey, Date.now().toString());
+          if (latestRes.success && Array.isArray(latestRes.data) && latestRes.data.length > 0) {
+            const freshLatest = removeDuplicates(latestRes.data);
+            setLatest(freshLatest);
+            try {
+              localStorage.setItem('zunime_latest_cache_v2', JSON.stringify(freshLatest));
+              localStorage.setItem(cacheTimeKey, Date.now().toString());
+            } catch (_) {}
           }
-        } catch (e) {
-          console.error('Core background refresh failed:', e);
-        }
-      } else {
-        // Foreground load
-        try {
-          const [latestRes, popularRes] = await Promise.all([
-            fetch('/api/latest').then(r => r.json()),
-            fetch('/api/popular').then(r => r.json())
-          ]);
-
-          if (isMounted) {
-            if (latestRes.success) {
-              const freshLatest = removeDuplicates(latestRes.data);
-              setLatest(freshLatest);
-              localStorage.setItem('zunime_latest_cache', JSON.stringify(freshLatest));
-            }
-            if (popularRes.success) {
-              const freshPopular = removeDuplicates(popularRes.data);
-              setHotAnime(freshPopular);
-              localStorage.setItem('zunime_popular_cache', JSON.stringify(freshPopular));
-            }
-            localStorage.setItem(cacheTimeKey, Date.now().toString());
+          if (popularRes.success && Array.isArray(popularRes.data) && popularRes.data.length > 0) {
+            const freshPopular = removeDuplicates(popularRes.data);
+            setHotAnime(freshPopular);
+            try {
+              localStorage.setItem('zunime_popular_cache_v2', JSON.stringify(freshPopular));
+              localStorage.setItem(cacheTimeKey, Date.now().toString());
+            } catch (_) {}
           }
-        } catch (e) {
-          console.error('Error fetching core home data:', e);
-        } finally {
-          if (isMounted) setLoading(false);
         }
+      } catch (e) {
+        console.error('Error fetching core home data:', e);
+      } finally {
+        if (isMounted) setLoading(false);
       }
     }
 
