@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { schedule } from '@/lib/scraper';
 
+export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
+
 // Simple in-memory server-side cache persisting across dev hot reloads
 if (!global._scheduleCache) {
   global._scheduleCache = { data: null, timestamp: 0 };

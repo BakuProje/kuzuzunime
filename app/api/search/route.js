@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { search, getAniListData, cleanTitle, getSimilarity } from '@/lib/scraper';
+
+export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
 import dns from 'dns';
 import https from 'https';
 import axios from 'axios';

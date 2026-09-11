@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
-import { animeterbaru, getAniListData, cleanTitle, search, getAnimePoster } from '@/lib/scraper';
+import { animeterbaru, getAniListData, cleanTitle, getAnimePoster } from '@/lib/scraper';
 
-// Simple in-memory server-side cache persisting across dev hot reloads
+export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
+
+// Simple in-memory server-side cache persisting across requests
 if (!global._latestCache) {
   global._latestCache = { data: null, timestamp: 0 };
 }
@@ -15,7 +18,6 @@ export async function GET(request) {
   const canCache = page === 1 && (limit === 20 || limit === 50);
 
   if (canCache && global._latestCache.data && (Date.now() - global._latestCache.timestamp < CACHE_TTL)) {
-    console.log('[SERVER CACHE HIT] Serving latest from server cache');
     return NextResponse.json({ success: true, data: global._latestCache.data });
   }
 
