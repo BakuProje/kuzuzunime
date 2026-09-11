@@ -4,7 +4,7 @@ export async function GET() {
   try {
     // Recommendation: Use process.env.IG_API_KEY for production security
     const apiKey = 'caliphkey'; 
-    const account = 'kuzuroken.20';
+    const account = 'kuzuroken.site';
     const apiUrl = `https://api.caliph.my.id/api/igprofile?acc=${account}&apikey=${apiKey}`;
 
     const response = await fetch(
@@ -34,7 +34,7 @@ export async function GET() {
       success: false,
       data: {
         followers: "1.2K", // Default fallback as requested
-        username: "kuzuroken.20",
+        username: "kuzuroken.site",
         full_name: "Kuzu Roken",
         biography: "Zunime Developer",
       }
