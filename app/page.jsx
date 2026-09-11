@@ -168,7 +168,7 @@ export default function HomePage() {
         // Silent background refresh
         try {
           const [latestRes, popularRes] = await Promise.all([
-            fetch('/api/latest?limit=50').then(r => r.json()),
+            fetch('/api/latest').then(r => r.json()),
             fetch('/api/popular').then(r => r.json())
           ]);
           
@@ -192,7 +192,7 @@ export default function HomePage() {
         // Foreground load
         try {
           const [latestRes, popularRes] = await Promise.all([
-            fetch('/api/latest?limit=50').then(r => r.json()),
+            fetch('/api/latest').then(r => r.json()),
             fetch('/api/popular').then(r => r.json())
           ]);
 
