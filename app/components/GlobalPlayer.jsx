@@ -93,9 +93,11 @@ export default function GlobalPlayer() {
   }, [isMinimized, isOpen, dragY, activeEpisode, router, setIsMinimized]);
 
   const [iframeLoading, setIframeLoading] = useState(true);
+  const [iframeError, setIframeError] = useState(false);
 
   useEffect(() => {
     setIframeLoading(true);
+    setIframeError(false);
   }, [activeEpisode?.currentStream]);
 
   if (!isOpen || !activeEpisode) return null;
@@ -163,7 +165,7 @@ export default function GlobalPlayer() {
     >
       {/* Video Viewport Frame — iframe is ALWAYS mounted, never changes src */}
       <div className="global-player-video-section" style={{ position: 'relative' }}>
-        {activeEpisode.currentStream ? (
+        {activeEpisode.currentStream && !iframeError ? (
           <>
             {iframeLoading && (
               <div
@@ -193,6 +195,10 @@ export default function GlobalPlayer() {
               referrerPolicy="origin"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               onLoad={() => setIframeLoading(false)}
+              onError={() => {
+                setIframeLoading(false);
+                setIframeError(true);
+              }}
               style={{ 
                 pointerEvents: (isMinimized || isDragging) ? 'none' : 'auto',
                 width: '100%',
@@ -206,27 +212,63 @@ export default function GlobalPlayer() {
           <div 
             key="maintenance-fallback"
             style={{
-            width: '100%',
-            height: '100%',
-            background: '#050505',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px',
-            textAlign: 'center',
-            color: 'white',
-            aspectRatio: '16/9'
-          }}>
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ff0000" strokeWidth="2" style={{ marginBottom: '10px' }}>
-              <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon>
-              <line x1="12" y1="8" x2="12" y2="12"></line>
-              <line x1="12" y1="16" x2="12.01" y2="16"></line>
-            </svg>
-            <h4 style={{ fontSize: '0.95rem', fontWeight: '800', marginBottom: '5px' }}>Server Sedang Sibuk / Maintenance</h4>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', maxWidth: '280px' }}>
-              Link video dari server tidak tersedia saat ini. Silakan pilih server alternatif lainnya.
+              width: '100%',
+              height: '100%',
+              background: 'radial-gradient(circle at center, #1a0b16 0%, #08070d 100%)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '24px',
+              textAlign: 'center',
+              color: 'white',
+              aspectRatio: '16/9',
+              boxSizing: 'border-box'
+            }}
+          >
+            <div style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '50%',
+              background: 'rgba(255, 45, 85, 0.15)',
+              border: '1px solid rgba(255, 45, 85, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '12px'
+            }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ff2d55" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+            </div>
+            <h4 style={{ fontSize: '0.95rem', fontWeight: '800', marginBottom: '6px', color: '#fff' }}>
+              Stream Video Tidak Dapat Diputar
+            </h4>
+            <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', maxWidth: '300px', lineHeight: '1.4', marginBottom: '16px' }}>
+              Server sedang maintenance atau episode belum rilis. Silakan muat ulang atau pilih server alternatif.
             </p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => {
+                  setIframeError(false);
+                  setIframeLoading(true);
+                }}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  background: 'var(--gradient, linear-gradient(90deg, #ff0000, #cc0000))',
+                  color: 'white',
+                  fontWeight: '700',
+                  fontSize: '0.75rem',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                Coba Lagi
+              </button>
+            </div>
           </div>
         )}
       </div>
