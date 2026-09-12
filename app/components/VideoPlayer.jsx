@@ -14,7 +14,7 @@ export default function VideoPlayer({ src }) {
   return (
     <div className="premium-player-container">
         <div className="video-wrapper">
-            <iframe id="video-player" src={src} allowFullScreen></iframe>
+            <iframe id="video-player" src={src} allowFullScreen referrerPolicy="no-referrer"></iframe>
         </div>
     </div>
   );

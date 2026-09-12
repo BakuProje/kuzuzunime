@@ -192,7 +192,7 @@ export default function GlobalPlayer() {
               id="video-player-iframe"
               src={activeEpisode.currentStream}
               allowFullScreen
-              referrerPolicy="origin"
+              referrerPolicy="no-referrer"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               onLoad={() => setIframeLoading(false)}
               onError={() => {
