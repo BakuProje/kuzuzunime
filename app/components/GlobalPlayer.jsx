@@ -93,11 +93,13 @@ export default function GlobalPlayer() {
   }, [isMinimized, isOpen, dragY, activeEpisode, router, setIsMinimized]);
 
   const [iframeLoading, setIframeLoading] = useState(true);
-  const [iframeError, setIframeError] = useState(false);
 
   useEffect(() => {
     setIframeLoading(true);
-    setIframeError(false);
+    const timer = setTimeout(() => {
+      setIframeLoading(false);
+    }, 3000);
+    return () => clearTimeout(timer);
   }, [activeEpisode?.currentStream]);
 
   if (!isOpen || !activeEpisode) return null;
@@ -165,7 +167,7 @@ export default function GlobalPlayer() {
     >
       {/* Video Viewport Frame — iframe is ALWAYS mounted, never changes src */}
       <div className="global-player-video-section" style={{ position: 'relative' }}>
-        {activeEpisode.currentStream && !iframeError ? (
+        {activeEpisode.currentStream ? (
           <>
             {iframeLoading && (
               <div
@@ -192,13 +194,9 @@ export default function GlobalPlayer() {
               id="video-player-iframe"
               src={activeEpisode.currentStream}
               allowFullScreen
-              referrerPolicy="no-referrer"
+              referrerPolicy="origin"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               onLoad={() => setIframeLoading(false)}
-              onError={() => {
-                setIframeLoading(false);
-                setIframeError(true);
-              }}
               style={{ 
                 pointerEvents: (isMinimized || isDragging) ? 'none' : 'auto',
                 width: '100%',
