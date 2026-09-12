@@ -72,7 +72,8 @@ function SearchPageContent() {
                     };
                     sessionStorage.setItem('pending_anime_detail', JSON.stringify(dataToSave));
                   }
-                  router.push(`/anime/${encodeURIComponent(anime.url)}`);
+                  const cleanUrl = (anime.url || '').replace(/^\/+|\/+$/g, '').replace(/^(anime|watch|nonton)\//i, '');
+                  router.push(`/anime/${cleanUrl}`);
                 }}
               >
                 <div className="item-thumb-wrapper">

@@ -121,7 +121,7 @@ export default function EpisodeList({ episodes, progressList = [], variant = 'gr
           const isWatched = progressPercent > 0 || currentProgress > 0;
 
           return (
-            <Link href={`/watch/${encodeURIComponent(ep.url)}`} key={ep.url}>
+            <Link href={`/watch/${cleanEpUrl}`} key={ep.url}>
               <div className={`square-ep-item ${isActive ? 'active' : ''} ${isWatched ? 'watched' : ''}`}>
                 {epNum}
                 {/* Show lock only if not watched and not active */}
@@ -183,7 +183,7 @@ export default function EpisodeList({ episodes, progressList = [], variant = 'gr
         const isWatched = progressPercent > 0 || currentProgress > 0;
 
         return (
-          <Link href={`/watch/${encodeURIComponent(ep.url)}`} key={ep.url}>
+          <Link href={`/watch/${cleanEpUrl}`} key={ep.url}>
             <div className="premium-ep-card" style={{ position: 'relative', overflow: 'hidden' }}>
               <div className="ep-left">
                 <span className="ep-main-title">{displayTitle}</span>

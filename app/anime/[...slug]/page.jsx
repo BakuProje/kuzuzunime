@@ -34,14 +34,17 @@ export default function AnimeDetail() {
   const [progressList, setProgressList] = useState([]);
 
   const rawSlug = params.slug;
-  let slug = '';
-  const rawPath = Array.isArray(rawSlug) ? rawSlug.map(decodeURIComponent).join('/') : decodeURIComponent(rawSlug || '');
-  const cleanPath = rawPath.replace(/\/+/g, '/').replace(/^\/+|\/+$/g, '');
-  if (cleanPath.startsWith('anime/')) {
-    slug = '/' + cleanPath + '/';
-  } else {
-    slug = '/anime/' + cleanPath + '/';
+  let rawStr = Array.isArray(rawSlug) ? rawSlug.join('/') : String(rawSlug || '');
+  try {
+    while (rawStr.includes('%2F') || rawStr.includes('%2f')) {
+      rawStr = decodeURIComponent(rawStr);
+    }
+  } catch (e) {}
+  let cleanPath = rawStr.replace(/\/+/g, '/').replace(/^\/+|\/+$/g, '');
+  while (cleanPath.startsWith('anime/')) {
+    cleanPath = cleanPath.replace(/^anime\//i, '');
   }
+  const slug = '/anime/' + cleanPath + '/';
 
 
   useEffect(() => {
@@ -233,7 +236,19 @@ export default function AnimeDetail() {
           </div>
 
           <div className="premium-main-actions">
-            <button className="btn-mulai" onClick={() => data.episodes?.[0] && router.push(`/watch/${encodeURIComponent(data.episodes[data.episodes.length - 1].url)}`)}>
+            <button 
+              className="btn-mulai" 
+              onClick={() => {
+                if (data.episodes && data.episodes.length > 0) {
+                  // Pick first episode (in ascending episode 1)
+                  const targetEp = data.episodes[data.episodes.length - 1]?.url || data.episodes[0]?.url;
+                  if (targetEp) {
+                    let cleanEp = targetEp.replace(/^\/+|\/+$/g, '').replace(/^(watch|nonton)\//i, '');
+                    router.push(`/watch/${cleanEp}`);
+                  }
+                }
+              }}
+            >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
               Nonton
             </button>
@@ -265,7 +280,8 @@ export default function AnimeDetail() {
                       };
                       sessionStorage.setItem('pending_anime_detail', JSON.stringify(dataToSave));
                     }
-                    router.push(`/anime/${encodeURIComponent(rel.id)}`);
+                    const cleanRel = (rel.id || rel.url || '').replace(/^\/+|\/+$/g, '').replace(/^anime\//i, '');
+                    router.push(`/anime/${cleanRel}`);
                   }}>
                     <div className="scroll-card-img">
                       <img 

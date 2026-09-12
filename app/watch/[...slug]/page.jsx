@@ -49,16 +49,17 @@ export default function WatchPage() {
   };
 
   const rawSlug = params.slug;
-  let slug = '';
-  const rawPath = Array.isArray(rawSlug) ? rawSlug.map(decodeURIComponent).join('/') : decodeURIComponent(rawSlug || '');
-  let cleanPath = rawPath.replace(/\/+/g, '/').replace(/^\/+|\/+$/g, '');
-  if (cleanPath.startsWith('watch/')) {
-    cleanPath = cleanPath.substring(6);
+  let rawStr = Array.isArray(rawSlug) ? rawSlug.join('/') : String(rawSlug || '');
+  try {
+    while (rawStr.includes('%2F') || rawStr.includes('%2f')) {
+      rawStr = decodeURIComponent(rawStr);
+    }
+  } catch (e) {}
+  let cleanPath = rawStr.replace(/\/+/g, '/').replace(/^\/+|\/+$/g, '');
+  while (cleanPath.startsWith('watch/') || cleanPath.startsWith('nonton/')) {
+    cleanPath = cleanPath.replace(/^(watch|nonton)\//i, '');
   }
-  if (cleanPath.startsWith('anime/')) {
-    cleanPath = cleanPath.substring(6);
-  }
-  slug = '/' + cleanPath + '/';
+  const slug = '/' + cleanPath + '/';
 
 
   useEffect(() => {
@@ -218,20 +219,64 @@ export default function WatchPage() {
   };
 
   if (loading) return <div className="section-container"><Skeleton className="video-wrapper" style={{ height: '220px', borderRadius: '0' }} /></div>;
-  if (!data) return <div className="section-container">Video tidak ditemukan.</div>;
+  if (!data) {
+    return (
+      <div className="section-container" style={{ textAlign: 'center', padding: '60px 20px', color: 'white' }}>
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2" style={{ marginBottom: '16px' }}>
+          <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <h2 style={{ fontSize: '1.2rem', fontWeight: '800', marginBottom: '8px' }}>Video Tidak Dapat Dimuat</h2>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '24px', maxWidth: '320px', margin: '0 auto 24px' }}>
+          Tidak dapat memuat stream untuk episode ini. Silakan muat ulang atau pilih episode lain.
+        </p>
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+          <button 
+            onClick={() => window.location.reload()} 
+            style={{ 
+              padding: '10px 20px', 
+              borderRadius: '10px', 
+              background: 'var(--primary)', 
+              color: 'white', 
+              fontWeight: '700', 
+              border: 'none', 
+              cursor: 'pointer' 
+            }}
+          >
+            Muat Ulang
+          </button>
+          <button 
+            onClick={() => router.push('/')} 
+            style={{ 
+              padding: '10px 20px', 
+              borderRadius: '10px', 
+              background: 'rgba(255,255,255,0.1)', 
+              color: 'white', 
+              fontWeight: '700', 
+              border: '1px solid rgba(255,255,255,0.15)', 
+              cursor: 'pointer' 
+            }}
+          >
+            Beranda
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const displayRating = parentData ? (parentData.rating && parentData.rating !== 'N/A' ? parentData.rating : (parentData.info?.skor && parentData.info.skor !== 'N/A' ? parentData.info.skor : '8.5')) : '8.5';
   const displayStudio = parentData ? (parentData.studio || parentData.info?.studio || 'Zunime') : 'Zunime';
   const displayStatus = parentData ? getStatusLabel(parentData.status || parentData.info?.status) : 'Ongoing';
-  const parentTitle = parentData ? parentData.title : data.title.split(' Episode ')[0];
+  const parentTitle = parentData ? parentData.title : (data.title ? data.title.split(' Episode ')[0] : 'Anime');
 
   // Parse current episode info for Youtube channel bar
   let displayEpisodeNum = 'Episode';
-  let epNumMatch = data.title.match(/(?:Episode|Eps|Ep)\s*(\d+(\.\d+)?)/i);
+  let epNumMatch = data.title?.match(/(?:Episode|Eps|Ep)\s*(\d+(\.\d+)?)/i);
   if (epNumMatch) displayEpisodeNum = `Episode ${epNumMatch[1]}`;
-  else displayEpisodeNum = data.title;
+  else displayEpisodeNum = data.title || 'Episode 1';
 
-  const displayViews = (Math.floor(Math.abs(data.title.length * 8.5) % 200) + 100) + '.000';
+  const displayViews = (Math.floor(Math.abs((data.title?.length || 10) * 8.5) % 200) + 100) + '.000';
   const displayDate = parentData?.episodes?.find(e => e.url === slug)?.date || 'Baru Saja';
 
   return (
@@ -384,7 +429,8 @@ export default function WatchPage() {
                       };
                       sessionStorage.setItem('pending_anime_detail', JSON.stringify(dataToSave));
                     }
-                    router.push(`/anime/${encodeURIComponent(rel.id)}`);
+                    const cleanRel = (rel.id || rel.url || '').replace(/^\/+|\/+$/g, '').replace(/^anime\//i, '');
+                    router.push(`/anime/${cleanRel}`);
                   }}
                 >
                   <div className="scroll-card-img">
@@ -417,7 +463,7 @@ export default function WatchPage() {
           </button>
           <h3 className="server-modal-title">Pilih Server Tersedia</h3>
           <div className="server-option-list">
-            {data.streams.map((stream, idx) => (
+            {(data.streams || []).map((stream, idx) => (
               <button
                 key={idx}
                 className={`server-option-item ${activeServer === idx ? 'active' : ''}`}

@@ -97,7 +97,8 @@ export default function GlobalPlayer() {
   const handleExpand = () => {
     setIsMinimized(false);
     setIsPlaying(true);
-    router.push(`/watch/${encodeURIComponent(activeEpisode.slug)}`);
+    let cleanSlug = (activeEpisode.slug || '').replace(/^\/+|\/+$/g, '').replace(/^(watch|nonton)\//i, '');
+    router.push(`/watch/${cleanSlug}`);
   };
 
   const togglePlayPause = (e) => {

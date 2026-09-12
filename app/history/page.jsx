@@ -72,7 +72,8 @@ export default function HistoryPage() {
                           };
                           sessionStorage.setItem('pending_anime_detail', JSON.stringify(dataToSave));
                         }
-                        router.push(`/anime/${encodeURIComponent(item.anime_id)}`);
+                        const cleanId = (item.anime_id || '').replace(/^\/+|\/+$/g, '').replace(/^(anime|watch|nonton)\//i, '');
+                        router.push(`/anime/${cleanId}`);
                       }}
                     >
                         <div className="history-card-img-wrapper">

@@ -30,8 +30,10 @@ export default function AnimeCard({ anime }) {
     badgeContent = displayRating;
   }
 
+  const cleanAnimeUrl = (url || '').replace(/^\/+|\/+$/g, '').replace(/^(anime|watch|nonton)\//i, '');
+
   return (
-    <Link href={`/anime/${encodeURIComponent(url)}`}>
+    <Link href={`/anime/${cleanAnimeUrl}`}>
       <div className="scroll-card">
           <div className="scroll-card-img">
               <img 

@@ -59,8 +59,10 @@ export default function PremiumAnimeCard({ anime, isNew = false, views = null })
     }
   };
 
+  const cleanAnimeUrl = (url || '').replace(/^\/+|\/+$/g, '').replace(/^(anime|watch|nonton)\//i, '');
+
   return (
-    <Link href={`/anime/${encodeURIComponent(url)}`} onClick={handlePreload}>
+    <Link href={`/anime/${cleanAnimeUrl}`} onClick={handlePreload}>
       <div className="premium-anime-card">
           <div className="premium-card-img-wrapper">
               <img 
