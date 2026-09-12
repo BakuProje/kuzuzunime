@@ -240,8 +240,9 @@ export async function GET(request) {
         console.error("Custom Nekopoi watch scraper failed:", nekopoiErr.message);
       }
 
-      // If Nekopoi watch scrape failed, try Samehadaku / universal resolver
-      const data = await download(url);
+      // If Nekopoi watch scrape failed, try Samehadaku / universal resolver with cleaned slug
+      const unhentaiSlug = cleanSlug.replace(/^hentai-/i, '');
+      const data = await download(unhentaiSlug);
       if (data && data.streams && data.streams.length > 0) {
         return NextResponse.json({ success: true, data });
       }
@@ -249,17 +250,8 @@ export async function GET(request) {
       return NextResponse.json({
         success: true,
         data: {
-          title: cleanSlug.replace(/^hentai-/i, '').replace(/-/g, ' '),
-          streams: [
-            {
-              server: 'Server HD 1 (Vidsrc VIP)',
-              url: `https://vidsrc.pm/embed/anime/${cleanSlug.replace(/^hentai-/i, '')}/1`
-            },
-            {
-              server: 'Server HD 2 (MultiEmbed)',
-              url: `https://multiembed.mov/directstream.php?video_id=${cleanSlug.replace(/^hentai-/i, '')}&s=1&e=1`
-            }
-          ]
+          title: unhentaiSlug.replace(/-/g, ' '),
+          streams: data?.streams || []
         }
       });
     }
