@@ -32,13 +32,65 @@ export default function GlobalPlayer() {
     startYRef.current = 0;
   }, [isMinimized, isOpen, dragY]);
 
-  // Minimize helper
-  const handleMinimize = (e) => {
-    if (e) e.stopPropagation();
-    setIsMinimized(true);
-    const parent = activeEpisode?.parentSlug || '/';
-    router.push(parent);
-  };
+  // Swipe-down minimize gesture — works on ENTIRE watch page, no button needed
+  useEffect(() => {
+    if (isMinimized || !isOpen) return;
+
+    let touchStartY = 0;
+    let scrollAtStart = 0;
+    let isSwipeActive = false;
+
+    const handleTouchStart = (e) => {
+      touchStartY = e.touches[0].clientY;
+      scrollAtStart = window.scrollY;
+      isSwipeActive = false;
+    };
+
+    const handleTouchMove = (e) => {
+      // Only activate swipe-to-minimize when scrolled to top
+      if (scrollAtStart > 10) return;
+
+      const currentY = e.touches[0].clientY;
+      const diffY = currentY - touchStartY;
+
+      // Only trigger downward swipe, ignore upward
+      if (diffY > 15) {
+        isSwipeActive = true;
+        if (e.cancelable) e.preventDefault();
+        dragY.set(diffY);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      if (!isSwipeActive) {
+        dragY.set(0);
+        return;
+      }
+
+      const currentDragY = dragY.get();
+      if (currentDragY > 80) {
+        // Trigger minimize
+        setIsMinimized(true);
+        const parent = activeEpisode?.parentSlug || '/';
+        router.push(parent);
+      } else {
+        // Spring back
+        animate(dragY, 0, { type: 'spring', stiffness: 300, damping: 25 });
+      }
+
+      isSwipeActive = false;
+    };
+
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleTouchEnd);
+
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isMinimized, isOpen, dragY, activeEpisode, router, setIsMinimized]);
 
   if (!isOpen || !activeEpisode) return null;
 
@@ -104,36 +156,6 @@ export default function GlobalPlayer() {
     >
       {/* Video Viewport Frame — iframe is ALWAYS mounted, never changes src */}
       <div className="global-player-video-section" style={{ position: 'relative' }}>
-        {!isMinimized && (
-          <button
-            className="player-minimize-top-btn"
-            onClick={handleMinimize}
-            aria-label="Minimize Player"
-            style={{
-              position: 'absolute',
-              top: '12px',
-              left: '12px',
-              zIndex: 30,
-              width: '36px',
-              height: '36px',
-              borderRadius: '50%',
-              background: 'rgba(0, 0, 0, 0.65)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              color: 'white',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              backdropFilter: 'blur(8px)',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-          </button>
-        )}
-
         {activeEpisode.currentStream ? (
           <iframe
             key={activeEpisode.currentStream}
