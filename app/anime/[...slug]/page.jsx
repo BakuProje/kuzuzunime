@@ -7,28 +7,19 @@ import AnimeCard from '@/app/components/AnimeCard';
 import { supabase } from '@/lib/supabase';
 import { usePlayer } from '@/app/components/PlayerContext';
 
+// Helper to parse status label
+function getStatusLabel(status) {
+  if (status === 'FINISHED' || status === 'Completed') return 'Completed';
+  if (status === 'RELEASING' || status === 'Ongoing') return 'Ongoing';
+  return status || 'Ongoing';
+}
+
 export default function AnimeDetail() {
   const params = useParams();
   const { activeEpisode, currentTime, duration } = usePlayer();
   const router = useRouter();
-  const [data, setData] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const pending = sessionStorage.getItem('pending_anime_detail');
-      if (pending) {
-        try {
-          return JSON.parse(pending);
-        } catch (_) {}
-      }
-    }
-    return null;
-  });
-  const [loading, setLoading] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const pending = sessionStorage.getItem('pending_anime_detail');
-      if (pending) return false;
-    }
-    return true;
-  });
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
   const [user, setUser] = useState(null);
   const [progressList, setProgressList] = useState([]);
@@ -173,11 +164,6 @@ export default function AnimeDetail() {
     ? data.genres
     : (data?.info?.genre && data.info.genre.trim() !== '' ? data.info.genre.split(',').map(g => g.trim()) : ['Fantasy', 'Comedy', 'Slice of Life', 'Action']);
 
-  const getStatusLabel = (status) => {
-    if (status === 'FINISHED') return 'Completed';
-    if (status === 'RELEASING') return 'Ongoing';
-    return status || data?.info?.status || 'Ongoing';
-  };
 
   return (
     <div id="detail-view" className="section-container page-transition">
