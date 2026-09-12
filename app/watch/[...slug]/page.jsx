@@ -90,11 +90,15 @@ export default function WatchPage() {
         if (json.success && isMounted) {
           setData(json.data);
           if (json.data.streams && json.data.streams.length > 0) {
-            // Smart Selector: select first non-blogspot/non-blogger server as default to prevent initial load errors
+            // Smart Selector: prioritize native Putarin / DesuStream / Mogo / Fast streams
             let defaultIdx = json.data.streams.findIndex(s => {
               const name = (s.server || '').toLowerCase();
-              return !name.includes('blogspot') && !name.includes('blogger');
+              const url = (s.url || '').toLowerCase();
+              return (name.includes('putarin') || name.includes('puterin') || name.includes('mogo') || name.includes('desu') || name.includes('streampoi')) && !url.includes('vidlink.pro');
             });
+            if (defaultIdx === -1) {
+              defaultIdx = json.data.streams.findIndex(s => !s.url?.includes('vidlink.pro'));
+            }
             if (defaultIdx === -1) {
               defaultIdx = 0;
             }
@@ -145,14 +149,18 @@ export default function WatchPage() {
   }, [slug, data, currentStream, parentData, activeServer]);
 
   const trackView = async (url) => {
+    if (!url) return;
     try {
-      const { data: current } = await supabase.from('view_counts').select('views').eq('episode_id', url).maybeSingle();
+      const { data: current, error: selErr } = await supabase.from('view_counts').select('views').eq('episode_id', url).maybeSingle();
+      if (selErr) return;
       if (current) {
         await supabase.from('view_counts').update({ views: current.views + 1 }).eq('episode_id', url);
       } else {
         await supabase.from('view_counts').insert({ episode_id: url, views: 1 });
       }
-    } catch (e) { }
+    } catch (e) {
+      // Silently ignore RLS permission errors without polluting the console
+    }
   };
 
   const saveProgress = async (episodeUrl, animeUrl, anime) => {
