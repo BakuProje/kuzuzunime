@@ -158,11 +158,12 @@ export default function GlobalPlayer() {
       <div className="global-player-video-section" style={{ position: 'relative' }}>
         {activeEpisode.currentStream ? (
           <iframe
-            key="active-iframe"
+            key={activeEpisode.currentStream}
             id="video-player-iframe"
             src={activeEpisode.currentStream}
             allowFullScreen
-            allow="autoplay"
+            referrerPolicy="no-referrer"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             style={{ 
               pointerEvents: (isMinimized || isDragging) ? 'none' : 'auto',
               width: '100%',

@@ -239,7 +239,25 @@ export async function GET(request) {
       } catch (nekopoiErr) {
         console.error("Custom Nekopoi watch scraper failed:", nekopoiErr.message);
       }
-      return NextResponse.json({ success: true, data: { title: 'Hentai Watch', streams: [] } });
+
+      // If Nekopoi watch scrape failed, try Samehadaku / universal resolver
+      const data = await download(url);
+      if (data && data.streams && data.streams.length > 0) {
+        return NextResponse.json({ success: true, data });
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          title: cleanSlug.replace(/^hentai-/i, '').replace(/-/g, ' '),
+          streams: [
+            {
+              server: 'Server HD 1 (Player)',
+              url: `https://vidsrc.cc/v2/embed/anime/${cleanSlug.replace(/^hentai-/i, '')}/1`
+            }
+          ]
+        }
+      });
     }
 
     const data = await download(url);
