@@ -360,22 +360,20 @@ export async function GET(request) {
     if (data) {
       result = { ...data };
       if (aniData) {
-        // Determine the best cover image: prefer Nekopoi proxied cover for adult content,
-        // otherwise use AniList poster if available
-        const nekopoiHasRealImage = data.image && data.image !== '/Zunime.png' && data.image !== '/placeholder.jpg';
-        const bestImage = nekopoiHasRealImage ? data.image : (aniData.poster || data.image);
+        const hasRealScrapedImage = data.image && !data.image.includes('placeholder') && data.image !== '/Zunime.png';
+        const bestImage = hasRealScrapedImage ? data.image : (aniData.poster || data.image);
 
         result = {
           ...data,
-          rating: aniData.rating || data.info?.skor || '8.5',
-          banner: aniData.banner,
-          genres: aniData.genres || data.genres || [],
-          totalEpisodes: aniData.totalEpisodes || data.totalEpisodes,
-          relatedAnime: aniData.relatedAnime || [],
-          studio: aniData.studio || data.info?.studio || 'Unknown',
-          status: aniData.status,
-          format: aniData.format,
-          startDate: aniData.startDate,
+          rating: (data.info?.skor && data.info.skor !== 'N/A') ? data.info.skor : (aniData.rating || '8.5'),
+          banner: aniData.banner || bestImage,
+          genres: (data.genres && data.genres.length > 0) ? data.genres : (aniData.genres || ['Action', 'Fantasy']),
+          totalEpisodes: (data.episodes && data.episodes.length > 0) ? data.episodes.length : (aniData.totalEpisodes || data.totalEpisodes || 12),
+          relatedAnime: (data.relatedAnime && data.relatedAnime.length > 0) ? data.relatedAnime : (aniData.relatedAnime || []),
+          studio: data.info?.studio || aniData.studio || 'Zunime',
+          status: data.info?.status || aniData.status || 'Ongoing',
+          format: data.info?.type || aniData.format || 'TV',
+          startDate: data.info?.season || data.info?.dirilis || aniData.startDate || '2026',
           endDate: aniData.endDate,
           image: bestImage
         };

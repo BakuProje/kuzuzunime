@@ -18,8 +18,17 @@ export default function AnimeDetail() {
   const params = useParams();
   const { activeEpisode, currentTime, duration } = usePlayer();
   const router = useRouter();
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  
+  const [data, setData] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = sessionStorage.getItem('pending_anime_detail');
+        if (cached) return JSON.parse(cached);
+      } catch (e) {}
+    }
+    return null;
+  });
+  const [loading, setLoading] = useState(!data);
   const [isFavorite, setIsFavorite] = useState(false);
   const [user, setUser] = useState(null);
   const [progressList, setProgressList] = useState([]);
@@ -37,13 +46,12 @@ export default function AnimeDetail() {
   }
   const slug = '/anime/' + cleanPath + '/';
 
-
   useEffect(() => {
     async function fetchData() {
       try {
         const res = await fetch(`/api/detail?url=${encodeURIComponent(slug)}`);
         const json = await res.json();
-        if (json.success) {
+        if (json.success && json.data) {
           setData(prev => {
             const merged = { ...prev, ...json.data };
             // Keep preloaded card cover image if API returns placeholder or fallback

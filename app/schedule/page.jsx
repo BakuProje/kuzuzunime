@@ -1,10 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Skeleton from '../components/Skeleton';
 
 const DAY_NAMES_ID = ['MIN', 'SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB'];
 
 export default function SchedulePage() {
+  const router = useRouter();
   const [scheduleData, setScheduleData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeDay, setActiveDay] = useState('');
@@ -152,7 +154,26 @@ export default function SchedulePage() {
           {/* Schedule List */}
           <div className="schedule-list">
             {activeDayData && activeDayData.list.map((anime, idx) => (
-              <div key={`${anime.id}-${idx}`} className="schedule-card-wrapper">
+              <div 
+                key={`${anime.id}-${idx}`} 
+                className="schedule-card-wrapper"
+                style={{ cursor: 'pointer' }}
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    const dataToSave = {
+                      title: anime.title,
+                      image: anime.image || '/placeholder.jpg',
+                      rating: anime.score || '8.5',
+                      banner: anime.image || '/placeholder.jpg',
+                      genres: [],
+                      status: 'Ongoing'
+                    };
+                    sessionStorage.setItem('pending_anime_detail', JSON.stringify(dataToSave));
+                  }
+                  const cleanUrl = (anime.url || anime.id || '').replace(/^\/+|\/+$/g, '').replace(/^(anime|watch|nonton)\//i, '');
+                  router.push(`/anime/${cleanUrl}`);
+                }}
+              >
                 <div className="schedule-card">
                   <div className="schedule-time-bar" style={{ background: anime.status === 'Akan Tayang' ? '#3b82f6' : '#fbbf24' }}></div>
                   <div className="schedule-time">{anime.time} <span style={{fontSize: '0.6rem', opacity: 0.6, display: 'block'}}>WIB</span></div>

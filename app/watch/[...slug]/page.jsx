@@ -11,14 +11,21 @@ function getParentAnimeSlug(epUrl) {
   if (!epUrl) return '';
   try {
     const pathname = epUrl.startsWith('http') ? new URL(epUrl).pathname : epUrl;
-    let clean = pathname.replace(/^\/|\/$/g, '');
-    if (clean.startsWith('anime/')) {
-      clean = clean.substring(6);
-    }
-    const parts = clean.split(/-episode-|-eps-|-ep-/i);
-    if (parts.length > 0) {
-      return `/anime/${parts[0]}/`;
-    }
+    let clean = decodeURIComponent(pathname)
+      .replace(/\/+/g, '/')
+      .replace(/^\/+|\/+$/g, '')
+      .replace(/^(anime|watch|nonton)\//i, '');
+
+    clean = clean
+      .replace(/\/episode\/\d+.*$/i, '')
+      .replace(/\/eps\/\d+.*$/i, '')
+      .replace(/\/ep\/\d+.*$/i, '')
+      .replace(/-episode-\d+.*$/i, '')
+      .replace(/-eps-\d+.*$/i, '')
+      .replace(/-ep-\d+.*$/i, '')
+      .replace(/^\/+|\/+$/g, '');
+
+    return `/anime/${clean}/`;
   } catch (e) {
     console.error(e);
   }
