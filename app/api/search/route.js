@@ -158,6 +158,54 @@ async function scrapeNekopoiGenre(genre, page = 1) {
   return items;
 }
 
+async function fetchKitsuByGenre(genre) {
+  try {
+    // 1. Try category filter
+    const res = await axios.get(
+      `https://kitsu.io/api/edge/anime?filter[categories]=${encodeURIComponent(genre)}&sort=-userCount&page[limit]=20`,
+      {
+        headers: { 'Accept': 'application/vnd.api+json' },
+        timeout: 4000
+      }
+    );
+    let items = res.data?.data || [];
+    
+    // 2. If categories return 0 (e.g. for niche tags), try text search filter
+    if (items.length === 0) {
+      const textRes = await axios.get(
+        `https://kitsu.io/api/edge/anime?filter[text]=${encodeURIComponent(genre)}&page[limit]=20`,
+        {
+          headers: { 'Accept': 'application/vnd.api+json' },
+          timeout: 4000
+        }
+      );
+      items = textRes.data?.data || [];
+    }
+
+    return items.map(item => {
+      const attr = item.attributes || {};
+      const title = attr.canonicalTitle || attr.titles?.en_jp || attr.titles?.en || 'Anime';
+      const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      return {
+        title,
+        altTitle: attr.titles?.en && attr.titles.en !== title ? attr.titles.en : (attr.titles?.ja_jp || null),
+        url: `/anime/${slug}-sub-indo/`,
+        image: attr.posterImage?.large || attr.posterImage?.medium || attr.posterImage?.original || '/placeholder.jpg',
+        banner: attr.coverImage?.large || attr.coverImage?.original || attr.posterImage?.large || '/placeholder.jpg',
+        score: attr.averageRating ? (parseFloat(attr.averageRating) / 10).toFixed(1) : '8.5',
+        episode: attr.episodeCount ? `${attr.episodeCount}` : (attr.status === 'finished' ? 'Tamat' : 'Ongoing'),
+        status: attr.status === 'finished' ? 'Completed' : 'Ongoing',
+        type: attr.showType?.toUpperCase() || 'TV',
+        genres: [genre],
+        synopsis: attr.synopsis || `Nonton streaming anime ${title} sub indo gratis hanya di ZUNIME.`
+      };
+    });
+  } catch (err) {
+    console.warn(`[Kitsu Genre Error] ${genre}:`, err.message);
+    return [];
+  }
+}
+
 // Simple in-memory cache
 const searchCache = new Map();
 const CACHE_TTL = 3600 * 1000; // 1 hour
@@ -175,7 +223,7 @@ export async function GET(request) {
       'blowjob', 'bdsm', 'tentacles', 'cheating', 'uncensored', 'jav', 'jav cosplay'
     ];
     const isHentai = HENTAI_GENRES.includes(genre.toLowerCase().trim());
-    const cacheKey = `genre-${genre.toLowerCase()}`;
+    const cacheKey = `genre-${genre.toLowerCase().trim()}`;
     
     // Check Cache
     if (searchCache.has(cacheKey)) {
@@ -212,155 +260,60 @@ export async function GET(request) {
         return NextResponse.json({ success: true, data: [] });
       }
 
-      // Fallback: AniList Hentai Query if Nekopoi fails
+      // Fallback: Kitsu Hentai categories query
       try {
-        const response = await fetch('https://graphql.anilist.co', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: `
-              query ($genre: String) {
-                Page(page: 1, perPage: 80) {
-                  media(genre: $genre, type: ANIME, isAdult: true, sort: POPULARITY_DESC) {
-                    id
-                    title { romaji english }
-                    coverImage { extraLarge large }
-                    bannerImage
-                    averageScore
-                    episodes
-                    status
-                    format
-                    genres
-                    description
-                  }
-                }
-              }
-            `,
-            variables: { genre: 'Hentai' }
-          })
-        });
-
-        if (response.ok) {
-          const json = await response.json();
-          const mediaList = json?.data?.Page?.media || [];
-          const mappedList = mediaList.map(m => {
-            const romaji = m.title?.romaji || '';
-            const english = m.title?.english || '';
-            const fallbackTitle = romaji || english || 'Unknown';
-            const url = `/anime/${m.id}/`;
-            return {
-              title: fallbackTitle,
-              altTitle: english && english !== romaji ? english : null,
-              url: url,
-              image: m.coverImage?.extraLarge || m.coverImage?.large,
-              banner: m.bannerImage,
-              score: m.averageScore ? (m.averageScore / 10).toFixed(1) : '8.5',
-              episode: m.episodes ? m.episodes.toString() : (m.status === 'RELEASING' ? 'Ongoing' : 'Tamat'),
-              status: m.status === 'RELEASING' ? 'Ongoing' : (m.status === 'FINISHED' ? 'Completed' : m.status),
-              type: m.format || 'TV',
-              genres: m.genres || [],
-              synopsis: m.description ? m.description.replace(/<[^>]*>/g, '') : null
-            };
-          });
-
+        const fallbackList = await fetchKitsuByGenre('Hentai');
+        if (fallbackList.length > 0) {
           searchCache.set(cacheKey, {
             timestamp: Date.now(),
-            data: mappedList
+            data: fallbackList
           });
-
-          return NextResponse.json({ success: true, data: mappedList });
+          return NextResponse.json({ success: true, data: fallbackList });
         }
       } catch (err) {
-        console.error("AniList Hentai fallback error:", err);
+        console.error("Hentai fallback error:", err);
       }
       return NextResponse.json({ success: true, data: [] });
     }
 
-    // Normal Genres: AniList GraphQL query (omitting isAdult argument entirely to avoid any null match issues!)
+    // Normal Genres: Parallel Samehadaku Search + Kitsu Categories
     try {
-      const response = await fetch('https://graphql.anilist.co', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `
-            query ($genre: String) {
-              Page(page: 1, perPage: 80) {
-                media(genre: $genre, type: ANIME, sort: POPULARITY_DESC) {
-                  id
-                  title { romaji english }
-                  coverImage { extraLarge large }
-                  bannerImage
-                  averageScore
-                  episodes
-                  status
-                  format
-                  genres
-                  description
-                }
-              }
-            }
-          `,
-          variables: { genre }
-        })
-      });
+      const [samehadakuResults, kitsuResults] = await Promise.all([
+        search(genre).catch(() => []),
+        fetchKitsuByGenre(genre).catch(() => [])
+      ]);
 
-      if (!response.ok) {
-        return NextResponse.json({ success: true, data: [] });
+      const samehadakuList = (samehadakuResults || []).map(item => ({
+        ...item,
+        genres: item.genres && item.genres.length > 0 ? item.genres : [genre]
+      }));
+
+      const kitsuList = kitsuResults || [];
+
+      // Deduplicate by normalized title
+      const seen = new Set();
+      const combined = [];
+
+      for (const item of [...samehadakuList, ...kitsuList]) {
+        const normKey = (item.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (normKey && !seen.has(normKey)) {
+          seen.add(normKey);
+          combined.push(item);
+        }
       }
 
-      const json = await response.json();
-      const mediaList = json?.data?.Page?.media || [];
-
-      const mappedList = mediaList.map(m => {
-        const romaji = m.title?.romaji || '';
-        const english = m.title?.english || '';
-        const fallbackTitle = romaji || english || 'Unknown';
-        
-        const urlFriendlyTitle = (romaji || english || '')
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-+|-+$/g, '');
-        const url = `/anime/${m.id}/`;
-
-        return {
-          title: fallbackTitle,
-          altTitle: english && english !== romaji ? english : null,
-          url: url,
-          image: m.coverImage?.extraLarge || m.coverImage?.large,
-          banner: m.bannerImage,
-          score: m.averageScore ? (m.averageScore / 10).toFixed(1) : '8.5',
-          episode: m.episodes ? m.episodes.toString() : (m.status === 'RELEASING' ? 'Ongoing' : 'Tamat'),
-          status: m.status === 'RELEASING' ? 'Ongoing' : (m.status === 'FINISHED' ? 'Completed' : m.status),
-          type: m.format || 'TV',
-          genres: m.genres || [],
-          synopsis: m.description ? m.description.replace(/<[^>]*>/g, '') : null
-        };
-      });
-
-      if (mappedList && mappedList.length > 0) {
+      if (combined.length > 0) {
         searchCache.set(cacheKey, {
           timestamp: Date.now(),
-          data: mappedList
+          data: combined
         });
-
-        return NextResponse.json({ success: true, data: mappedList });
-      }
-
-      // Fallback: search Samehadaku directly for this genre keyword
-      const samehadakuGenreResults = await search(genre).catch(() => []);
-      if (samehadakuGenreResults && samehadakuGenreResults.length > 0) {
-        searchCache.set(cacheKey, {
-          timestamp: Date.now(),
-          data: samehadakuGenreResults
-        });
-        return NextResponse.json({ success: true, data: samehadakuGenreResults });
+        return NextResponse.json({ success: true, data: combined });
       }
 
       return NextResponse.json({ success: true, data: [] });
     } catch (err) {
-      console.error("Genre search API error, falling back to samehadaku search:", err);
-      const fallbackResults = await search(genre).catch(() => []);
-      return NextResponse.json({ success: true, data: fallbackResults });
+      console.error("Genre search API error:", err);
+      return NextResponse.json({ success: true, data: [] });
     }
   }
 

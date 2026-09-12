@@ -94,7 +94,13 @@ function SearchPageContent() {
                       <h3 className="title-modern">{anime.title}</h3>
                       <p className="subtitle-modern">{anime.altTitle || 'Judul Alternatif'}</p>
                       <div className="meta-row-modern">
-                         <span>👁 {(Math.floor(Math.abs(anime.title.length * 7.5) % 800) + 150)}K views</span>
+                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.8 }}>
+                             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                             <circle cx="12" cy="12" r="3"></circle>
+                           </svg>
+                           {(Math.floor(Math.abs(anime.title.length * 7.5) % 800) + 150)}K views
+                         </span>
                          <span className="dot">•</span>
                          <span>{anime.type || 'TV'}</span>
                       </div>
@@ -108,7 +114,12 @@ function SearchPageContent() {
             ))
           ) : (
             <div className="empty-search-state">
-              <div className="empty-icon">🔍</div>
+              <div className="empty-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--primary)', opacity: 0.85 }}>
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              </div>
               <h2>Oopps! Tidak ditemukan</h2>
               <p>Coba gunakan kata kunci lain atau periksa ejaanmu.</p>
             </div>
