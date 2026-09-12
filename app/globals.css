@@ -4856,3 +4856,19 @@ body:has(#profile-view-v2), html:has(#profile-view-v2) {
   }
 }
 
+.player-loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(255, 255, 255, 0.15);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: playerSpinner 0.8s linear infinite;
+}
+
+@keyframes playerSpinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+

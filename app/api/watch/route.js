@@ -252,8 +252,12 @@ export async function GET(request) {
           title: cleanSlug.replace(/^hentai-/i, '').replace(/-/g, ' '),
           streams: [
             {
-              server: 'Server HD 1 (Player)',
-              url: `https://vidsrc.cc/v2/embed/anime/${cleanSlug.replace(/^hentai-/i, '')}/1`
+              server: 'Server HD 1 (Vidsrc VIP)',
+              url: `https://vidsrc.pm/embed/anime/${cleanSlug.replace(/^hentai-/i, '')}/1`
+            },
+            {
+              server: 'Server HD 2 (MultiEmbed)',
+              url: `https://multiembed.mov/directstream.php?video_id=${cleanSlug.replace(/^hentai-/i, '')}&s=1&e=1`
             }
           ]
         }

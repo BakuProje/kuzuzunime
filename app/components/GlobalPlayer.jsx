@@ -147,6 +147,12 @@ export default function GlobalPlayer() {
         height: 'auto'
       };
 
+  const [iframeLoading, setIframeLoading] = useState(true);
+
+  useEffect(() => {
+    setIframeLoading(true);
+  }, [activeEpisode?.currentStream]);
+
   return (
     <motion.div
       layout
@@ -157,21 +163,44 @@ export default function GlobalPlayer() {
       {/* Video Viewport Frame — iframe is ALWAYS mounted, never changes src */}
       <div className="global-player-video-section" style={{ position: 'relative' }}>
         {activeEpisode.currentStream ? (
-          <iframe
-            key={activeEpisode.currentStream}
-            id="video-player-iframe"
-            src={activeEpisode.currentStream}
-            allowFullScreen
-            referrerPolicy="no-referrer"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            style={{ 
-              pointerEvents: (isMinimized || isDragging) ? 'none' : 'auto',
-              width: '100%',
-              height: '100%',
-              border: 'none',
-              display: 'block'
-            }}
-          ></iframe>
+          <>
+            {iframeLoading && (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: '#0a0a0c',
+                  zIndex: 2,
+                  pointerEvents: 'none'
+                }}
+              >
+                <div className="player-loading-spinner"></div>
+                <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', marginTop: '10px', fontWeight: '600' }}>
+                  Memuat Video Player...
+                </span>
+              </div>
+            )}
+            <iframe
+              key={activeEpisode.currentStream}
+              id="video-player-iframe"
+              src={activeEpisode.currentStream}
+              allowFullScreen
+              referrerPolicy="no-referrer"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              onLoad={() => setIframeLoading(false)}
+              style={{ 
+                pointerEvents: (isMinimized || isDragging) ? 'none' : 'auto',
+                width: '100%',
+                height: '100%',
+                border: 'none',
+                display: 'block'
+              }}
+            ></iframe>
+          </>
         ) : (
           <div 
             key="maintenance-fallback"
@@ -195,7 +224,7 @@ export default function GlobalPlayer() {
             </svg>
             <h4 style={{ fontSize: '0.95rem', fontWeight: '800', marginBottom: '5px' }}>Server Sedang Sibuk / Maintenance</h4>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', maxWidth: '280px' }}>
-              Link video dari server Nekopoi/Samehadaku tidak tersedia saat ini. Silakan coba beberapa saat lagi.
+              Link video dari server tidak tersedia saat ini. Silakan pilih server alternatif lainnya.
             </p>
           </div>
         )}
