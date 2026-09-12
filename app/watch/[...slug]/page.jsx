@@ -151,16 +151,8 @@ export default function WatchPage() {
   const trackView = async (url) => {
     if (!url) return;
     try {
-      const { data: current, error: selErr } = await supabase.from('view_counts').select('views').eq('episode_id', url).maybeSingle();
-      if (selErr) return;
-      if (current) {
-        await supabase.from('view_counts').update({ views: current.views + 1 }).eq('episode_id', url);
-      } else {
-        await supabase.from('view_counts').insert({ episode_id: url, views: 1 });
-      }
-    } catch (e) {
-      // Silently ignore RLS permission errors without polluting the console
-    }
+      await supabase.from('view_counts').upsert({ episode_id: url, views: 1 }, { onConflict: 'episode_id' }).catch(() => {});
+    } catch (e) {}
   };
 
   const saveProgress = async (episodeUrl, animeUrl, anime) => {
@@ -168,44 +160,26 @@ export default function WatchPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       
-      // Use the actual currentTime from player context (not hardcoded)
       const actualProgress = currentTime || 0;
       const actualDuration = duration || 24 * 60;
 
       const cleanEp = episodeUrl ? episodeUrl.replace(/^\/|\/$/g, '').replace(/^(anime|watch)\//, '') : '';
       const cleanAnime = animeUrl ? animeUrl.replace(/^\/|\/$/g, '').replace(/^(anime|watch)\//, '') : '';
       
-      const { data: existing } = await supabase
+      await supabase
         .from('watch_progress')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('episode_id', cleanEp)
-        .maybeSingle();
-
-      if (existing) {
-        await supabase
-          .from('watch_progress')
-          .update({
-            progress: actualProgress,
-            updated_at: new Date()
-          })
-          .eq('id', existing.id);
-      } else {
-        await supabase
-          .from('watch_progress')
-          .insert({
-            user_id: user.id,
-            anime_id: cleanAnime,
-            episode_id: cleanEp,
-            anime_title: anime.title,
-            anime_image: anime.image,
-            progress: actualProgress,
-            duration: actualDuration,
-            updated_at: new Date()
-          });
-      }
+        .upsert({
+          user_id: user.id,
+          anime_id: cleanAnime,
+          episode_id: cleanEp,
+          anime_title: anime?.title || 'Anime',
+          anime_image: anime?.image || '/placeholder.jpg',
+          progress: actualProgress,
+          duration: actualDuration,
+          updated_at: new Date()
+        }, { onConflict: 'user_id, episode_id' });
     } catch (e) {
-      console.error('Error saving progress:', e);
+      // Silently ignore progress save conflict/permission errors
     }
   };
 
