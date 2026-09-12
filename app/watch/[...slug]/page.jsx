@@ -64,15 +64,15 @@ export default function WatchPage() {
   useEffect(() => {
     let isMounted = true;
     async function fetchData() {
-      // Check auth session first: user must be logged in to watch
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      if (!currentUser) {
-        router.push('/auth');
-        return;
-      }
+      // Optional auth check for profile tracking & EXP
+      try {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (currentUser && isMounted) {
+          setUser(currentUser);
+        }
+      } catch (_) {}
       
       if (isMounted) {
-        setUser(currentUser);
         setLoading(true);
       }
       
