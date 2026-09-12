@@ -2,23 +2,48 @@
 import Link from 'next/link';
 import { usePlayer } from './PlayerContext';
 
-export default function EpisodeList({ episodes, progressList = [], variant = 'grid', activeUrl = '' }) {
+// Helper to normalize slugs consistently
+const normalizeSlug = (slug) => {
+  if (!slug) return '';
+  return slug
+    .replace(/^\/|\/$/g, '')              // remove leading/trailing slashes
+    .replace(/^(anime|watch|nonton)\//i, ''); // remove leading anime/ or watch/ prefixes
+};
+
+// Custom SVG Lock Icon matching the premium theme
+const LockIcon = () => (
+  <svg 
+    width="14" 
+    height="14" 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2.5" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    style={{ opacity: 0.6, verticalAlign: 'middle' }}
+  >
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </svg>
+);
+
+// Helper to format seconds to M:SS
+const formatTime = (seconds) => {
+  if (!seconds || seconds < 0) return '0:00';
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+
+export default function EpisodeList({ episodes = [], progressList = [], variant = 'grid', activeUrl = '' }) {
   // Pull active episode and currentTime in real-time from the player context
-  const { watchedEpisodes, activeEpisode, currentTime } = usePlayer() || { 
-    watchedEpisodes: {}, 
-    activeEpisode: null, 
-    currentTime: 0 
-  };
+  const playerContext = usePlayer();
+  const watchedEpisodes = playerContext?.watchedEpisodes || {};
+  const activeEpisode = playerContext?.activeEpisode || null;
+  const currentTime = playerContext?.currentTime || 0;
 
   if (!episodes || episodes.length === 0) return <p>No episodes found.</p>;
-
-  // Helper to normalize slugs consistently
-  const normalizeSlug = (slug) => {
-    if (!slug) return '';
-    return slug
-      .replace(/^\/|\/$/g, '')              // remove leading/trailing slashes
-      .replace(/^(anime|watch)\//, '');     // remove leading anime/ or watch/ prefixes
-  };
 
   // Map database progress list for quick lookup
   const progressMap = {};
@@ -57,32 +82,6 @@ export default function EpisodeList({ episodes, progressList = [], variant = 'gr
     // Keep original ascending order
     return a.idx - b.idx;
   }).map(x => x.ep);
-
-  // Custom SVG Lock Icon matching the premium theme
-  const LockIcon = () => (
-    <svg 
-      width="14" 
-      height="14" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2.5" 
-      strokeLinecap="round" 
-      strokeLinejoin="round" 
-      style={{ opacity: 0.6, verticalAlign: 'middle' }}
-    >
-      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-    </svg>
-  );
-
-  // Helper to format seconds to M:SS
-  const formatTime = (seconds) => {
-    if (!seconds || seconds < 0) return '0:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
 
   const cleanActiveUrl = normalizeSlug(activeUrl);
 

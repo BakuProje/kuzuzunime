@@ -92,6 +92,12 @@ export default function GlobalPlayer() {
     };
   }, [isMinimized, isOpen, dragY, activeEpisode, router, setIsMinimized]);
 
+  const [iframeLoading, setIframeLoading] = useState(true);
+
+  useEffect(() => {
+    setIframeLoading(true);
+  }, [activeEpisode?.currentStream]);
+
   if (!isOpen || !activeEpisode) return null;
 
   const handleExpand = () => {
@@ -147,12 +153,6 @@ export default function GlobalPlayer() {
         width: '100vw',
         height: 'auto'
       };
-
-  const [iframeLoading, setIframeLoading] = useState(true);
-
-  useEffect(() => {
-    setIframeLoading(true);
-  }, [activeEpisode?.currentStream]);
 
   return (
     <motion.div

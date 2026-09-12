@@ -65,15 +65,15 @@ export default function WatchPage() {
   useEffect(() => {
     let isMounted = true;
     async function fetchData() {
-      // Check auth session first: user must be logged in to watch
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      if (!currentUser) {
-        router.push('/auth');
-        return;
-      }
+      // Check auth session safely without blocking or breaking unauthenticated users
+      try {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (isMounted && currentUser) {
+          setUser(currentUser);
+        }
+      } catch (authErr) {}
       
       if (isMounted) {
-        setUser(currentUser);
         setLoading(true);
       }
       
@@ -122,10 +122,10 @@ export default function WatchPage() {
   useEffect(() => {
     if (data) {
       const parent = getParentAnimeSlug(slug);
-      const parentTitle = parentData ? parentData.title : data.title.split(' Episode ')[0];
+      const parentTitle = parentData ? parentData.title : (data.title ? data.title.split(' Episode ')[0] : 'Anime');
       playEpisode({
         slug: slug,
-        title: data.title,
+        title: data.title || 'Anime Episode',
         parentTitle: parentTitle,
         currentStream: currentStream || '',
         parentData: parentData,
@@ -140,8 +140,11 @@ export default function WatchPage() {
   const trackView = async (url) => {
     try {
       const { data: current } = await supabase.from('view_counts').select('views').eq('episode_id', url).maybeSingle();
-      const views = current ? current.views + 1 : 1;
-      await supabase.from('view_counts').upsert({ episode_id: url, views });
+      if (current) {
+        await supabase.from('view_counts').update({ views: current.views + 1 }).eq('episode_id', url);
+      } else {
+        await supabase.from('view_counts').insert({ episode_id: url, views: 1 });
+      }
     } catch (e) { }
   };
 
