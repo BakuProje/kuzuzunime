@@ -1,67 +1,10 @@
+export const runtime = 'edge';
 import { NextResponse } from 'next/server';
 import { detail, getAniListData, cleanTitle, search, getSimilarity } from '@/lib/scraper';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
-import dns from 'dns';
-import https from 'https';
-import axios from 'axios';
 import * as cheerio from 'cheerio';
-
-const dnsCache = new Map();
-
-async function resolveDnsDoH(hostname) {
-  if (dnsCache.has(hostname)) {
-    return dnsCache.get(hostname);
-  }
-  try {
-    const agent = new https.Agent({ rejectUnauthorized: false });
-    const res = await axios.get(`https://8.8.8.8/resolve?name=${hostname}&type=A`, {
-      httpsAgent: agent,
-      headers: { 'Host': 'dns.google' },
-      timeout: 3000
-    });
-    if (res.data && res.data.Answer) {
-      const ips = res.data.Answer.filter(ans => ans.type === 1).map(ans => ans.data);
-      if (ips.length > 0) {
-        dnsCache.set(hostname, ips[0]);
-        return ips[0];
-      }
-    }
-  } catch (err) {
-    console.error(`[DoH Error] Failed resolving ${hostname}:`, err.message);
-  }
-  return null;
-}
-
-function customLookup(hostname, options, callback) {
-  if (typeof options === 'function') {
-    callback = options;
-    options = {};
-  }
-  if (hostname.includes('nekopoi.care') || hostname.includes('nekopoi.org')) {
-    resolveDnsDoH(hostname).then(ip => {
-      if (ip) {
-        if (options.all) {
-          callback(null, [{ address: ip, family: 4 }]);
-        } else {
-          callback(null, ip, 4);
-        }
-      } else {
-        callback(new Error(`ENOENT: DoH resolution failed for ${hostname}`), null, null);
-      }
-    }).catch(err => {
-      callback(err, null, null);
-    });
-    return;
-  }
-  return dns.lookup(hostname, options, callback);
-}
-
-const dohAgent = new https.Agent({
-  lookup: customLookup,
-  rejectUnauthorized: false
-});
 
 async function scrapeNekopoiDetail(slug) {
   const cleanSlug = slug.replace(/^hentai-/i, '').replace(/^\/|\/$/g, '').replace(/^(anime|watch)\//, '');
@@ -72,26 +15,27 @@ async function scrapeNekopoiDetail(slug) {
   console.log(`[Nekopoi Detail Scraper] Fetching post details: ${directUrl}`);
   
   try {
-    res = await axios.get(directUrl, {
-      httpsAgent: dohAgent,
+    const fetchRes = await fetch(directUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
       },
-      timeout: 8000
+      signal: AbortSignal.timeout(8000)
     });
+    const textData = await fetchRes.text();
+    res = { data: textData };
   } catch (directErr) {
     // If direct URL fails, try searching on nekopoi
     console.warn(`[Nekopoi Detail Scraper] Direct URL failed, trying search: ${directErr.message}`);
     const searchName = cleanSlug.replace(/-episode-\d+.*$/i, '').replace(/-subtitle-indonesia.*$/i, '').replace(/-/g, ' ').trim();
     try {
-      const searchRes = await axios.get(`https://nekopoi.care/?s=${encodeURIComponent(searchName)}&post_type=post`, {
-        httpsAgent: dohAgent,
+      const searchRes = await fetch(`https://nekopoi.care/?s=${encodeURIComponent(searchName)}&post_type=post`, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
         },
-        timeout: 8000
+        signal: AbortSignal.timeout(8000)
       });
-      const $s = cheerio.load(searchRes.data);
+      const searchData = await searchRes.text();
+      const $s = cheerio.load(searchData);
       let postUrl = null;
       $s('.result-post a, .post-box-title a, article a, .entry-title a, h2 a').each((i, el) => {
         if (postUrl) return;
@@ -102,13 +46,14 @@ async function scrapeNekopoiDetail(slug) {
       });
       if (postUrl) {
         console.log(`[Nekopoi Detail Scraper] Found post via search: ${postUrl}`);
-        res = await axios.get(postUrl, {
-          httpsAgent: dohAgent,
+        const postRes = await fetch(postUrl, {
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
           },
-          timeout: 8000
+          signal: AbortSignal.timeout(8000)
         });
+        const postData = await postRes.text();
+        res = { data: postData };
       }
     } catch (searchErr) {
       console.error(`[Nekopoi Detail Scraper] Search fallback failed:`, searchErr.message);

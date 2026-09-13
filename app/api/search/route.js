@@ -1,52 +1,23 @@
+export const runtime = 'edge';
 import { NextResponse } from 'next/server';
 import { search, getAniListData, cleanTitle, getSimilarity } from '@/lib/scraper';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
-import dns from 'dns';
-import https from 'https';
-import axios from 'axios';
 import * as cheerio from 'cheerio';
 
-const dnsCache = new Map();
-
-async function resolveDnsDoH(hostname) {
-  if (dnsCache.has(hostname)) {
-    return dnsCache.get(hostname);
-  }
-  const dnsServers = ['8.8.8.8', '1.1.1.1', '9.9.9.9'];
-  const agent = new https.Agent({ rejectUnauthorized: false });
-  
-  for (const dnsIp of dnsServers) {
-    try {
-      const hostHeader = dnsIp === '8.8.8.8' ? 'dns.google' : (dnsIp === '1.1.1.1' ? 'cloudflare-dns.com' : 'dns.quad9.net');
-      const res = await axios.get(`https://${dnsIp}/resolve?name=${hostname}&type=A`, {
-        httpsAgent: agent,
-        headers: { 'Host': hostHeader },
-        timeout: 2500
-      });
-      if (res.data && res.data.Answer) {
-        const ips = res.data.Answer.filter(ans => ans.type === 1).map(ans => ans.data);
-        if (ips.length > 0) {
-          dnsCache.set(hostname, ips[0]);
-          return ips[0];
-        }
-      }
-    } catch (err) {
-      console.warn(`[DoH Warning] Failed resolving ${hostname} via ${dnsIp}:`, err.message);
-    }
-  }
-  return null;
-}
-
-async function axiosGetRetry(url, config = {}, retries = 3, delay = 1000) {
+async function fetchGetRetry(url, config = {}, retries = 3, delay = 1000) {
   for (let i = 0; i < retries; i++) {
     try {
-      return await axios.get(url, config);
+      const res = await fetch(url, {
+        ...config,
+        signal: AbortSignal.timeout(config.timeout || 8000)
+      });
+      if (!res.ok && res.status !== 503) throw new Error(`HTTP ${res.status}`);
+      return res;
     } catch (err) {
-      const isRetryable = err.code === 'ECONNRESET' || err.code === 'ETIMEDOUT' || err.message.includes('timeout') || err.message.includes('Network Error') || err.response?.status === 503;
-      if (isRetryable && i < retries - 1) {
-        console.warn(`[Network Retry] GET ${url} failed (${err.code || err.message}). Retrying in ${delay}ms... (Attempt ${i + 1}/${retries})`);
+      if (i < retries - 1) {
+        console.warn(`[Network Retry] GET ${url} failed. Retrying in ${delay}ms... (Attempt ${i + 1}/${retries})`);
         await new Promise(r => setTimeout(r, delay));
       } else {
         throw err;
@@ -54,35 +25,6 @@ async function axiosGetRetry(url, config = {}, retries = 3, delay = 1000) {
     }
   }
 }
-
-function customLookup(hostname, options, callback) {
-  if (typeof options === 'function') {
-    callback = options;
-    options = {};
-  }
-  if (hostname.includes('nekopoi.care') || hostname.includes('nekopoi.org')) {
-    resolveDnsDoH(hostname).then(ip => {
-      if (ip) {
-        if (options.all) {
-          callback(null, [{ address: ip, family: 4 }]);
-        } else {
-          callback(null, ip, 4);
-        }
-      } else {
-        callback(new Error(`ENOENT: DoH resolution failed for ${hostname}`), null, null);
-      }
-    }).catch(err => {
-      callback(err, null, null);
-    });
-    return;
-  }
-  return dns.lookup(hostname, options, callback);
-}
-
-const dohAgent = new https.Agent({
-  lookup: customLookup,
-  rejectUnauthorized: false
-});
 
 function getNekopoiUrlForGenre(genre, page = 1) {
   const g = genre.toLowerCase().trim();
@@ -112,15 +54,15 @@ async function scrapeNekopoiGenre(genre, page = 1) {
   const url = getNekopoiUrlForGenre(genre, page);
   console.log(`[Nekopoi Scraper] Fetching category page: ${url}`);
   
-  const res = await axiosGetRetry(url, {
-    httpsAgent: dohAgent,
+  const res = await fetchGetRetry(url, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
     },
     timeout: 8000
   });
 
-  const $ = cheerio.load(res.data);
+  const html = await res.text();
+  const $ = cheerio.load(html);
   const items = [];
 
   $('a.nk-search-item').each((i, el) => {
@@ -161,25 +103,27 @@ async function scrapeNekopoiGenre(genre, page = 1) {
 async function fetchKitsuByGenre(genre) {
   try {
     // 1. Try category filter
-    const res = await axios.get(
+    const res = await fetch(
       `https://kitsu.io/api/edge/anime?filter[categories]=${encodeURIComponent(genre)}&sort=-userCount&page[limit]=20`,
       {
         headers: { 'Accept': 'application/vnd.api+json' },
-        timeout: 4000
+        signal: AbortSignal.timeout(4000)
       }
     );
-    let items = res.data?.data || [];
+    const data = await res.json();
+    let items = data?.data || [];
     
     // 2. If categories return 0 (e.g. for niche tags), try text search filter
     if (items.length === 0) {
-      const textRes = await axios.get(
+      const textRes = await fetch(
         `https://kitsu.io/api/edge/anime?filter[text]=${encodeURIComponent(genre)}&page[limit]=20`,
         {
           headers: { 'Accept': 'application/vnd.api+json' },
-          timeout: 4000
+          signal: AbortSignal.timeout(4000)
         }
       );
-      items = textRes.data?.data || [];
+      const textData = await textRes.json();
+      items = textData?.data || [];
     }
 
     return items.map(item => {
